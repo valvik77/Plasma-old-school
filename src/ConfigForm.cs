@@ -215,9 +215,9 @@ namespace PlasmaOldSchool
             advancedGroup.Controls.Add(MakeLabel("Calidad", 20, 266, 80));
             _qualityCombo = new ComboBox();
             _qualityCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            _qualityCombo.Items.Add("Baja · 160 × 90");
-            _qualityCombo.Items.Add("Clásica · 256 × 144");
-            _qualityCombo.Items.Add("Alta · 320 × 180");
+            _qualityCombo.Items.Add("Baja · GPU al 25%");
+            _qualityCombo.Items.Add("Clásica · GPU al 38%");
+            _qualityCombo.Items.Add("Alta · GPU al 50%");
             _qualityCombo.SetBounds(110, 261, 190, 28);
             advancedGroup.Controls.Add(_qualityCombo);
 

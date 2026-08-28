@@ -17,10 +17,23 @@ namespace PlasmaOldSchool
         private const byte PfdMainPlane = 0;
         private const uint GlColorBufferBit = 0x00004000;
         private const uint GlQuads = 0x0007;
+        private const uint GlLines = 0x0001;
+        private const uint GlBlend = 0x0BE2;
+        private const uint GlSrcAlpha = 0x0302;
+        private const uint GlOneMinusSrcAlpha = 0x0303;
         private const uint GlVertexShader = 0x8B31;
         private const uint GlFragmentShader = 0x8B30;
         private const uint GlCompileStatus = 0x8B81;
         private const uint GlLinkStatus = 0x8B82;
+        private const uint GlTexture2D = 0x0DE1;
+        private const uint GlRgba = 0x1908;
+        private const uint GlUnsignedByte = 0x1401;
+        private const uint GlTextureMinFilter = 0x2801;
+        private const uint GlTextureMagFilter = 0x2800;
+        private const int GlNearest = 0x2600;
+        private const uint GlFramebuffer = 0x8D40;
+        private const uint GlColorAttachment0 = 0x8CE0;
+        private const uint GlFramebufferComplete = 0x8CD5;
 
         private readonly Control _control;
         private IntPtr _hdc;
@@ -28,6 +41,11 @@ namespace PlasmaOldSchool
         private uint _program;
         private uint _vertexShader;
         private uint _fragmentShader;
+        private uint _framebuffer;
+        private uint _renderTexture;
+        private int _renderWidth;
+        private int _renderHeight;
+        private bool _framebufferSupported;
 
         private GlCreateShader _createShader;
         private GlShaderSource _shaderSource;
@@ -50,6 +68,11 @@ namespace PlasmaOldSchool
         private GlViewport _viewport;
         private GlClearColor _clearColor;
         private GlClear _clear;
+        private GlGenFramebuffers _genFramebuffers;
+        private GlBindFramebuffer _bindFramebuffer;
+        private GlFramebufferTexture2D _framebufferTexture2D;
+        private GlCheckFramebufferStatus _checkFramebufferStatus;
+        private GlDeleteFramebuffers _deleteFramebuffers;
 
         private int _resolution;
         private int _time;
@@ -98,12 +121,19 @@ namespace PlasmaOldSchool
             }
 
             WglMakeCurrent(_hdc, _glContext);
-            _viewport(0, 0, Math.Max(1, width), Math.Max(1, height));
+            bool reducedRendering = EnsureRenderTarget(width, height, engine.GpuRenderScale);
+            int renderWidth = reducedRendering ? _renderWidth : Math.Max(1, width);
+            int renderHeight = reducedRendering ? _renderHeight : Math.Max(1, height);
+            if (reducedRendering)
+            {
+                _bindFramebuffer(GlFramebuffer, _framebuffer);
+            }
+            _viewport(0, 0, renderWidth, renderHeight);
             _clearColor(0f, 0f, 0f, 1f);
             _clear(GlColorBufferBit);
             _useProgram(_program);
 
-            _uniform2f(_resolution, width, height);
+            _uniform2f(_resolution, renderWidth, renderHeight);
             _uniform1f(_time, (float)engine.Time);
             _uniform2f(_origin, (float)engine.OriginX, (float)engine.OriginY);
             _uniform1f(_scale, (float)engine.SpatialScale);
@@ -122,7 +152,7 @@ namespace PlasmaOldSchool
             _uniform2f(_mirror, engine.MirrorHorizontal ? -1f : 1f, engine.MirrorVertical ? -1f : 1f);
             _uniform1i(_colorCycle, engine.ColorCycle ? 1 : 0);
             _uniform1f(_colorShift, (float)engine.ColorShift);
-            _uniform1i(_scanlines, engine.Scanlines ? 1 : 0);
+            _uniform1i(_scanlines, engine.Scanlines && !reducedRendering ? 1 : 0);
             _uniform1f(_scanlineSpacing, engine.ScanlineSpacing);
             _uniform1f(_scanlineOpacity, engine.ScanlineOpacity / 255f);
             _uniform1i(_vignette, engine.Vignette ? 1 : 0);
@@ -141,7 +171,46 @@ namespace PlasmaOldSchool
             GlVertex2f(-1f, 1f);
             GlEnd();
             _useProgram(0);
+            if (reducedRendering)
+            {
+                _bindFramebuffer(GlFramebuffer, 0);
+                _viewport(0, 0, Math.Max(1, width), Math.Max(1, height));
+                GlEnable(GlTexture2D);
+                GlBindTexture(GlTexture2D, _renderTexture);
+                GlColor4f(1f, 1f, 1f, 1f);
+                GlBegin(GlQuads);
+                GlTexCoord2f(0f, 0f); GlVertex2f(-1f, -1f);
+                GlTexCoord2f(1f, 0f); GlVertex2f(1f, -1f);
+                GlTexCoord2f(1f, 1f); GlVertex2f(1f, 1f);
+                GlTexCoord2f(0f, 1f); GlVertex2f(-1f, 1f);
+                GlEnd();
+                GlDisable(GlTexture2D);
+                DrawScanlines(engine, width, height);
+            }
             SwapBuffers(_hdc);
+        }
+
+        private static void DrawScanlines(PlasmaEngine engine, int width, int height)
+        {
+            if (!engine.Scanlines || height <= 10)
+            {
+                return;
+            }
+
+            GlEnable(GlBlend);
+            GlBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha);
+            GlColor4f(0f, 0f, 0f, engine.ScanlineOpacity / 255f);
+            GlBegin(GlLines);
+            int y;
+            for (y = 2; y < height; y += engine.ScanlineSpacing)
+            {
+                float normalizedY = (y / (float)height) * 2f - 1f;
+                GlVertex2f(-1f, normalizedY);
+                GlVertex2f(1f, normalizedY);
+            }
+            GlEnd();
+            GlDisable(GlBlend);
+            GlColor4f(1f, 1f, 1f, 1f);
         }
 
         private void Initialize()
@@ -226,6 +295,91 @@ namespace PlasmaOldSchool
             _viewport = Load<GlViewport>("glViewport");
             _clearColor = Load<GlClearColor>("glClearColor");
             _clear = Load<GlClear>("glClear");
+            _framebufferSupported = TryLoadFramebufferFunctions();
+        }
+
+        private bool TryLoadFramebufferFunctions()
+        {
+            try
+            {
+                _genFramebuffers = LoadExtension<GlGenFramebuffers>("glGenFramebuffers", "glGenFramebuffersEXT");
+                _bindFramebuffer = LoadExtension<GlBindFramebuffer>("glBindFramebuffer", "glBindFramebufferEXT");
+                _framebufferTexture2D = LoadExtension<GlFramebufferTexture2D>("glFramebufferTexture2D", "glFramebufferTexture2DEXT");
+                _checkFramebufferStatus = LoadExtension<GlCheckFramebufferStatus>("glCheckFramebufferStatus", "glCheckFramebufferStatusEXT");
+                _deleteFramebuffers = LoadExtension<GlDeleteFramebuffers>("glDeleteFramebuffers", "glDeleteFramebuffersEXT");
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private T LoadExtension<T>(string coreName, string extensionName) where T : class
+        {
+            IntPtr pointer = WglGetProcAddress(coreName);
+            if (pointer == IntPtr.Zero || pointer == new IntPtr(1) || pointer == new IntPtr(2) || pointer == new IntPtr(3) || pointer == new IntPtr(-1))
+            {
+                pointer = WglGetProcAddress(extensionName);
+            }
+            if (pointer == IntPtr.Zero || pointer == new IntPtr(1) || pointer == new IntPtr(2) || pointer == new IntPtr(3) || pointer == new IntPtr(-1))
+            {
+                throw new InvalidOperationException("El controlador OpenGL no expone " + coreName + ".");
+            }
+            return Marshal.GetDelegateForFunctionPointer(pointer, typeof(T)) as T;
+        }
+
+        private bool EnsureRenderTarget(int width, int height, double scale)
+        {
+            if (!_framebufferSupported)
+            {
+                return false;
+            }
+
+            int targetWidth = Math.Max(1, (int)Math.Ceiling(width * scale));
+            int targetHeight = Math.Max(1, (int)Math.Ceiling(height * scale));
+            if (_framebuffer != 0 && _renderWidth == targetWidth && _renderHeight == targetHeight)
+            {
+                return true;
+            }
+
+            ReleaseRenderTarget();
+            _genFramebuffers(1, out _framebuffer);
+            GlGenTextures(1, out _renderTexture);
+            GlBindTexture(GlTexture2D, _renderTexture);
+            GlTexParameteri(GlTexture2D, GlTextureMinFilter, GlNearest);
+            GlTexParameteri(GlTexture2D, GlTextureMagFilter, GlNearest);
+            GlTexImage2D(GlTexture2D, 0, (int)GlRgba, targetWidth, targetHeight, 0, GlRgba, GlUnsignedByte, IntPtr.Zero);
+            _bindFramebuffer(GlFramebuffer, _framebuffer);
+            _framebufferTexture2D(GlFramebuffer, GlColorAttachment0, GlTexture2D, _renderTexture, 0);
+            bool complete = _checkFramebufferStatus(GlFramebuffer) == GlFramebufferComplete;
+            _bindFramebuffer(GlFramebuffer, 0);
+            if (!complete)
+            {
+                ReleaseRenderTarget();
+                _framebufferSupported = false;
+                return false;
+            }
+
+            _renderWidth = targetWidth;
+            _renderHeight = targetHeight;
+            return true;
+        }
+
+        private void ReleaseRenderTarget()
+        {
+            if (_framebuffer != 0 && _deleteFramebuffers != null)
+            {
+                _deleteFramebuffers(1, ref _framebuffer);
+                _framebuffer = 0;
+            }
+            if (_renderTexture != 0)
+            {
+                GlDeleteTextures(1, ref _renderTexture);
+                _renderTexture = 0;
+            }
+            _renderWidth = 0;
+            _renderHeight = 0;
         }
 
         private T Load<T>(string name) where T : class
@@ -301,6 +455,7 @@ namespace PlasmaOldSchool
             if (_glContext != IntPtr.Zero)
             {
                 WglMakeCurrent(_hdc, _glContext);
+                ReleaseRenderTarget();
                 if (_program != 0 && _deleteProgram != null) _deleteProgram(_program);
                 if (_vertexShader != 0 && _deleteShader != null) _deleteShader(_vertexShader);
                 if (_fragmentShader != 0 && _deleteShader != null) _deleteShader(_fragmentShader);
@@ -435,6 +590,11 @@ void main() {
         private delegate void GlViewport(int x, int y, int width, int height);
         private delegate void GlClearColor(float red, float green, float blue, float alpha);
         private delegate void GlClear(uint mask);
+        private delegate void GlGenFramebuffers(int count, out uint framebuffers);
+        private delegate void GlBindFramebuffer(uint target, uint framebuffer);
+        private delegate void GlFramebufferTexture2D(uint target, uint attachment, uint textureTarget, uint texture, int level);
+        private delegate uint GlCheckFramebufferStatus(uint target);
+        private delegate void GlDeleteFramebuffers(int count, ref uint framebuffers);
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetDC(IntPtr window);
@@ -464,6 +624,26 @@ void main() {
         private static extern void glEnd();
         [DllImport("opengl32.dll")]
         private static extern void glVertex2f(float x, float y);
+        [DllImport("opengl32.dll")]
+        private static extern void glTexCoord2f(float s, float t);
+        [DllImport("opengl32.dll")]
+        private static extern void glEnable(uint capability);
+        [DllImport("opengl32.dll")]
+        private static extern void glDisable(uint capability);
+        [DllImport("opengl32.dll")]
+        private static extern void glBindTexture(uint target, uint texture);
+        [DllImport("opengl32.dll")]
+        private static extern void glGenTextures(int count, out uint textures);
+        [DllImport("opengl32.dll")]
+        private static extern void glDeleteTextures(int count, ref uint textures);
+        [DllImport("opengl32.dll")]
+        private static extern void glTexParameteri(uint target, uint parameter, int value);
+        [DllImport("opengl32.dll")]
+        private static extern void glTexImage2D(uint target, int level, int internalFormat, int width, int height, int border, uint format, uint type, IntPtr pixels);
+        [DllImport("opengl32.dll")]
+        private static extern void glColor4f(float red, float green, float blue, float alpha);
+        [DllImport("opengl32.dll")]
+        private static extern void glBlendFunc(uint source, uint destination);
 
         private static T LoadStatic<T>(IntPtr pointer) where T : class
         {
@@ -473,6 +653,16 @@ void main() {
         private static void GlBegin(uint mode) { glBegin(mode); }
         private static void GlEnd() { glEnd(); }
         private static void GlVertex2f(float x, float y) { glVertex2f(x, y); }
+        private static void GlTexCoord2f(float s, float t) { glTexCoord2f(s, t); }
+        private static void GlEnable(uint capability) { glEnable(capability); }
+        private static void GlDisable(uint capability) { glDisable(capability); }
+        private static void GlBindTexture(uint target, uint texture) { glBindTexture(target, texture); }
+        private static void GlGenTextures(int count, out uint textures) { glGenTextures(count, out textures); }
+        private static void GlDeleteTextures(int count, ref uint textures) { glDeleteTextures(count, ref textures); }
+        private static void GlTexParameteri(uint target, uint parameter, int value) { glTexParameteri(target, parameter, value); }
+        private static void GlTexImage2D(uint target, int level, int internalFormat, int width, int height, int border, uint format, uint type, IntPtr pixels) { glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels); }
+        private static void GlColor4f(float red, float green, float blue, float alpha) { glColor4f(red, green, blue, alpha); }
+        private static void GlBlendFunc(uint source, uint destination) { glBlendFunc(source, destination); }
         private static bool WglMakeCurrent(IntPtr dc, IntPtr context) { return wglMakeCurrent(dc, context); }
         private static IntPtr WglCreateContext(IntPtr dc) { return wglCreateContext(dc); }
         private static bool WglDeleteContext(IntPtr context) { return wglDeleteContext(context); }

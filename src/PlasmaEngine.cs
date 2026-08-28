@@ -92,6 +92,7 @@ namespace PlasmaOldSchool
         internal bool ColorCycle { get { return _settings.ColorCycle; } }
         internal bool MovingOrigin { get { return _settings.MovingOrigin; } }
         internal int Pixelation { get { return _settings.Pixelation; } }
+        internal double GpuRenderScale { get { return _settings.RenderQuality == 1 ? 0.25 : (_settings.RenderQuality == 3 ? 0.50 : 0.375); } }
         internal double PhaseA { get { return _phaseA; } }
         internal double PhaseB { get { return _phaseB; } }
         internal double PhaseC { get { return _phaseC; } }

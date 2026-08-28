@@ -42,6 +42,8 @@ El motor también expone controles avanzados para densidad de ondas, pulso radia
 
 El modo **Ahorro** está activado por defecto y limita la presentación a 30 FPS, reduciendo el consumo y el ruido de los ventiladores. Puede desactivarse desde la configuración si se prefiere priorizar fluidez.
 
+Cuando se usa la GPU, la opción **Calidad** controla además la resolución interna del shader (25 %, 38 % o 50 % de la pantalla) y lo escala con píxel duro. Así conserva el acabado retro mientras reduce de forma notable el trabajo gráfico; los controladores que no admitan framebuffer objects conservan el renderizado GPU normal como respaldo.
+
 La configuración se guarda para el usuario actual en `HKCU\Software\PlasmaOldSchoolScreenSaver`.
 
 ## Reconstruir
