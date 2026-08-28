@@ -40,6 +40,7 @@ namespace PlasmaOldSchool
         private readonly CheckBox _mirrorHorizontalCheck;
         private readonly CheckBox _mirrorVerticalCheck;
         private readonly CheckBox _vignetteCheck;
+        private readonly CheckBox _powerSavingCheck;
         private readonly CheckBox _randomOriginCheck;
         private readonly CheckBox _movingOriginCheck;
         private readonly TrackBar _pixelationTrack;
@@ -238,6 +239,13 @@ namespace PlasmaOldSchool
             _vignetteCheck.SetBounds(550, 266, 110, 26);
             advancedGroup.Controls.Add(_vignetteCheck);
 
+            _powerSavingCheck = new CheckBox();
+            _powerSavingCheck.Text = "Ahorro ≤ 30 FPS";
+            _powerSavingCheck.AutoSize = true;
+            _powerSavingCheck.SetBounds(675, 266, 180, 26);
+            _powerSavingCheck.CheckedChanged += delegate { UpdateValueLabels(); };
+            advancedGroup.Controls.Add(_powerSavingCheck);
+
             _randomOriginCheck = new CheckBox();
             _randomOriginCheck.Text = "Origen aleatorio al iniciar";
             _randomOriginCheck.AutoSize = true;
@@ -327,6 +335,7 @@ namespace PlasmaOldSchool
             _mirrorHorizontalCheck.Checked = _settings.MirrorHorizontal;
             _mirrorVerticalCheck.Checked = _settings.MirrorVertical;
             _vignetteCheck.Checked = _settings.Vignette;
+            _powerSavingCheck.Checked = _settings.PowerSaving;
             _randomOriginCheck.Checked = _settings.RandomOrigin;
             _movingOriginCheck.Checked = _settings.MovingOrigin;
             _pixelationTrack.Value = Clamp(_settings.Pixelation, _pixelationTrack.Minimum, _pixelationTrack.Maximum);
@@ -437,6 +446,7 @@ namespace PlasmaOldSchool
             _settings.MirrorHorizontal = _mirrorHorizontalCheck.Checked;
             _settings.MirrorVertical = _mirrorVerticalCheck.Checked;
             _settings.Vignette = _vignetteCheck.Checked;
+            _settings.PowerSaving = _powerSavingCheck.Checked;
             _settings.RandomOrigin = _randomOriginCheck.Checked;
             _settings.MovingOrigin = _movingOriginCheck.Checked;
             _settings.Pixelation = _pixelationTrack.Value;
@@ -455,7 +465,9 @@ namespace PlasmaOldSchool
             _rotationValue.Text = (_rotationTrack.Value / 100.0).ToString("0.00") + "×";
             _brightnessValue.Text = _brightnessTrack.Value.ToString() + "%";
             _contrastValue.Text = _contrastTrack.Value.ToString() + "%";
-            _fpsValue.Text = _fpsTrack.Value.ToString() + " FPS";
+            _fpsValue.Text = _powerSavingCheck.Checked && _fpsTrack.Value > 30
+                ? "30 FPS máx."
+                : _fpsTrack.Value.ToString() + " FPS";
             _scanlineSpacingValue.Text = _scanlineSpacingTrack.Value.ToString() + " px";
             _scanlineOpacityValue.Text = _scanlineOpacityTrack.Value.ToString() + "%";
             _originXValue.Text = _originXTrack.Value.ToString() + "%";

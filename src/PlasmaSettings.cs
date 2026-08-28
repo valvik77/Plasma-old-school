@@ -107,6 +107,7 @@ namespace PlasmaOldSchool
         public double Contrast = 1.0;
         public int RenderQuality = 2;
         public int TargetFps = 50;
+        public bool PowerSaving = true;
         public int ScanlineSpacing = 4;
         public int ScanlineOpacity = 42;
         public bool MirrorHorizontal = false;
@@ -142,6 +143,7 @@ namespace PlasmaOldSchool
                     settings.Contrast = ReadDouble(key, "Contrast", settings.Contrast);
                     settings.RenderQuality = ReadInt(key, "RenderQuality", settings.RenderQuality);
                     settings.TargetFps = ReadInt(key, "TargetFps", settings.TargetFps);
+                    settings.PowerSaving = ReadBool(key, "PowerSaving", settings.PowerSaving);
                     settings.ScanlineSpacing = ReadInt(key, "ScanlineSpacing", settings.ScanlineSpacing);
                     settings.ScanlineOpacity = ReadInt(key, "ScanlineOpacity", settings.ScanlineOpacity);
                     settings.Scanlines = ReadBool(key, "Scanlines", settings.Scanlines);
@@ -207,6 +209,7 @@ namespace PlasmaOldSchool
                 key.SetValue("Contrast", Contrast.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
                 key.SetValue("RenderQuality", RenderQuality, RegistryValueKind.DWord);
                 key.SetValue("TargetFps", TargetFps, RegistryValueKind.DWord);
+                key.SetValue("PowerSaving", PowerSaving ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("ScanlineSpacing", ScanlineSpacing, RegistryValueKind.DWord);
                 key.SetValue("ScanlineOpacity", ScanlineOpacity, RegistryValueKind.DWord);
                 key.SetValue("Scanlines", Scanlines ? 1 : 0, RegistryValueKind.DWord);

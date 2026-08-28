@@ -65,7 +65,7 @@ namespace PlasmaOldSchool
 
         internal int Width { get { return _width; } }
         internal int Height { get { return _height; } }
-        internal int TargetFps { get { return _settings.TargetFps; } }
+        internal int TargetFps { get { return _settings.PowerSaving ? Math.Min(_settings.TargetFps, 30) : _settings.TargetFps; } }
         internal int ScanlineSpacing { get { return _settings.ScanlineSpacing; } }
         internal int ScanlineOpacity { get { return (int)(_settings.ScanlineOpacity * 2.55); } }
         internal bool MirrorHorizontal { get { return _settings.MirrorHorizontal; } }

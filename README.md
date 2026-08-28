@@ -40,6 +40,8 @@ La ventana de configuración permite elegir presets retro —incluidos **Fuego**
 
 El motor también expone controles avanzados para densidad de ondas, pulso radial, giro, brillo, contraste, calidad de renderizado, FPS objetivo, separación y opacidad de scanlines, espejo horizontal/vertical, viñeta CRT y posición del origen. El origen puede aleatorizarse automáticamente en cada ejecución o fijarse con coordenadas X/Y.
 
+El modo **Ahorro** está activado por defecto y limita la presentación a 30 FPS, reduciendo el consumo y el ruido de los ventiladores. Puede desactivarse desde la configuración si se prefiere priorizar fluidez.
+
 La configuración se guarda para el usuario actual en `HKCU\Software\PlasmaOldSchoolScreenSaver`.
 
 ## Reconstruir
