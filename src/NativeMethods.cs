@@ -21,6 +21,9 @@ namespace PlasmaOldSchool
         [DllImport("user32.dll")]
         private static extern bool SetProcessDPIAware();
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool SetDllDirectory(string path);
+
         [DllImport("user32.dll", SetLastError = true)]
         internal static extern IntPtr SetParent(IntPtr childWindow, IntPtr newParentWindow);
 
@@ -42,6 +45,19 @@ namespace PlasmaOldSchool
             catch
             {
                 // Windows anteriores pueden no exponer esta llamada.
+            }
+        }
+
+        internal static void TrySetDllDirectory(string path)
+        {
+            if (String.IsNullOrEmpty(path)) return;
+            try
+            {
+                SetDllDirectory(path);
+            }
+            catch
+            {
+                // OpenGL y CPU siguen disponibles si no puede cambiarse la ruta.
             }
         }
     }

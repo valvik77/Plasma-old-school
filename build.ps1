@@ -110,11 +110,8 @@ if (Test-Path -LiteralPath $installerScript) {
     }
     if (-not $innoCompiler) { throw 'No se encontró el compilador de Inno Setup 7.' }
 
-    if (Test-Path -LiteralPath $releaseDirectory) {
-        Remove-Item -LiteralPath $releaseDirectory -Recurse -Force
-    }
     New-Item -ItemType Directory -Force -Path $releaseDirectory | Out-Null
-    & $innoCompiler $installerScript
+    & $innoCompiler '--no-signing' $installerScript
     if ($LASTEXITCODE -ne 0) { throw "La creación del instalador terminó con el código $LASTEXITCODE." }
 }
 Write-Host "Creado: $outputFile"

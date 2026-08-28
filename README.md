@@ -24,7 +24,7 @@ Para abrir su configuración:
 
 ## Instalarlo
 
-Ejecuta `release\PlasmaOldSchoolSetup.exe`. El instalador copia el paquete completo a una ubicación estable del usuario, registra el salvapantallas y añade accesos para configurarlo, probarlo o desinstalarlo. No necesita permisos de administrador.
+Ejecuta `release\PlasmaOldSchoolSetup.exe`. El instalador copia el paquete a `Program Files`, coloca únicamente el lanzador `.scr` en `System32` para que aparezca permanentemente en la lista de protectores de pantalla y añade accesos para configurarlo, probarlo o desinstalarlo. Solicita permisos de administrador porque Windows sólo enumera de forma fiable los `.scr` instalados en la carpeta del sistema.
 
 Como alternativa manual, conserva la carpeta `dist` completa en una ubicación estable, haz clic derecho sobre `PlasmaOldSchool.scr` y selecciona **Instalar**. No copies únicamente el `.scr` si quieres conservar Direct3D 11 y la configuración WinUI 3.
 
@@ -52,6 +52,6 @@ La configuración se guarda para el usuario actual en `HKCU\Software\PlasmaOldSc
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-El script usa .NET Framework para el salvapantallas, MSBuild para la configuración WinUI 3, las herramientas C++ de Visual Studio para `PlasmaD3D11.dll` e Inno Setup 7 para el instalador. Genera el paquete en `dist` y `release\PlasmaOldSchoolSetup.exe`.
+El script usa .NET Framework para el salvapantallas, MSBuild para la configuración WinUI 3, las herramientas C++ de Visual Studio para `PlasmaD3D11.dll` e Inno Setup 7 para el instalador. Genera el paquete en `dist` y `release\PlasmaOldSchoolSetup.exe`. Los binarios públicos se generan sin una firma Authenticode personal.
 
 Las comprobaciones internas pueden ejecutarse sobre `PlasmaOldSchool.exe`: `/test` valida la CPU, `/gputest` OpenGL y `/d3dtest` Direct3D 11. Un resultado correcto devuelve el código de salida 0.

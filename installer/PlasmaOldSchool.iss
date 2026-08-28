@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.0.1"
 #endif
 
 #define MyAppName "Plasma Old School"
@@ -14,10 +14,12 @@ AppPublisher={#MyAppPublisher}
 VersionInfoVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Instalador de {#MyAppName}
-DefaultDirName={localappdata}\Programs\PlasmaOldSchool
+DefaultDirName={autopf}\Plasma Old School
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
-PrivilegesRequired=lowest
+DisableDirPage=yes
+UsePreviousAppDir=no
+PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
@@ -31,6 +33,7 @@ WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
 SetupLogging=yes
+SignedUninstaller=no
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -38,6 +41,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "..\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\PlasmaOldSchool.scr"; DestDir: "{sys}"; DestName: "PlasmaOldSchool.scr"; Flags: ignoreversion restartreplace
+
+[InstallDelete]
+Type: filesandordirs; Name: "{localappdata}\Programs\PlasmaOldSchool"
+
+[Registry]
+Root: HKLM64; Subkey: "Software\Valvik\PlasmaOldSchool"; ValueType: string; ValueName: "InstallLocation"; ValueData: "{app}"; Flags: uninsdeletekey
 
 [Icons]
 Name: "{group}\Configurar {#MyAppName}"; Filename: "{app}\PlasmaOldSchool.exe"; Parameters: "/c"
@@ -45,7 +55,7 @@ Name: "{group}\Probar {#MyAppName}"; Filename: "{app}\PlasmaOldSchool.exe"; Para
 Name: "{group}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{sys}\rundll32.exe"; Parameters: "desk.cpl,InstallScreenSaver ""{app}\{#MyAppExeName}"""; Description: "Abrir la configuración de salvapantallas de Windows"; Flags: postinstall nowait skipifsilent
+Filename: "{sys}\rundll32.exe"; Parameters: "desk.cpl,InstallScreenSaver ""{sys}\{#MyAppExeName}"""; Description: "Abrir la configuración de salvapantallas de Windows"; Flags: postinstall nowait skipifsilent
 
 [Code]
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -53,7 +63,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     RegWriteStringValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE',
-      ExpandConstant('{app}\{#MyAppExeName}'));
+      ExpandConstant('{sys}\{#MyAppExeName}'));
     RegWriteStringValue(HKCU, 'Control Panel\Desktop', 'ScreenSaveActive', '1');
   end;
 end;
@@ -65,7 +75,7 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
-    InstalledSaver := ExpandConstant('{app}\{#MyAppExeName}');
+    InstalledSaver := ExpandConstant('{sys}\{#MyAppExeName}');
     if RegQueryStringValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE', CurrentSaver) and
        (CompareText(CurrentSaver, InstalledSaver) = 0) then
     begin

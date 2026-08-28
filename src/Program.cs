@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace PlasmaOldSchool
 {
@@ -24,11 +25,16 @@ namespace PlasmaOldSchool
 
     internal static class Program
     {
+        private const string InstallationRegistryPath = @"Software\Valvik\PlasmaOldSchool";
+        private static string _runtimeDirectory;
+
         [STAThread]
         private static void Main(string[] args)
         {
             try
             {
+                _runtimeDirectory = ResolveRuntimeDirectory();
+                NativeMethods.TrySetDllDirectory(_runtimeDirectory);
                 NativeMethods.TryEnableDpiAwareness();
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
@@ -71,8 +77,7 @@ namespace PlasmaOldSchool
 
         private static void RunConfiguration()
         {
-            string executableDirectory = Path.GetDirectoryName(Application.ExecutablePath);
-            string configurationExecutable = Path.Combine(executableDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "PlasmaOldSchool.Config.exe");
+            string configurationExecutable = Path.Combine(_runtimeDirectory, "PlasmaOldSchool.Config.exe");
             if (File.Exists(configurationExecutable))
             {
                 ProcessStartInfo startInfo = new ProcessStartInfo(configurationExecutable);
@@ -84,6 +89,33 @@ namespace PlasmaOldSchool
             // Mantiene la configuración clásica como respaldo si se distribuye
             // únicamente el archivo .scr sin la carpeta WinUI 3 adjunta.
             Application.Run(new ConfigForm());
+        }
+
+        private static string ResolveRuntimeDirectory()
+        {
+            string executableDirectory = Path.GetDirectoryName(Application.ExecutablePath) ?? AppDomain.CurrentDomain.BaseDirectory;
+            if (File.Exists(Path.Combine(executableDirectory, "PlasmaOldSchool.Config.exe")) ||
+                File.Exists(Path.Combine(executableDirectory, "PlasmaD3D11.dll")))
+            {
+                return executableDirectory;
+            }
+
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(InstallationRegistryPath))
+                {
+                    string installedDirectory = key == null ? null : Convert.ToString(key.GetValue("InstallLocation"), CultureInfo.InvariantCulture);
+                    if (!String.IsNullOrEmpty(installedDirectory) && Directory.Exists(installedDirectory))
+                    {
+                        return installedDirectory;
+                    }
+                }
+            }
+            catch
+            {
+                // La copia portátil continúa usando su propia carpeta.
+            }
+            return executableDirectory;
         }
 
         private static LaunchRequest ParseArguments(string[] args)
