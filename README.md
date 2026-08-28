@@ -36,7 +36,7 @@ El archivo admite los modos estándar que usa Windows:
 
 ## Personalización
 
-La ventana de configuración permite elegir presets retro —incluidos **Fuego**, **RGB spectrum**, **Bosque eléctrico**, **Océano profundo**, **Violeta neón**, **Terminal fósforo** y **Monocromo**—, editar sus cuatro colores y activar una evolución cromática gradual.
+La ventana de configuración usa un diseño Fluent inspirado en WinUI: es redimensionable, adapta sus tarjetas al espacio disponible y usa el modo claro u oscuro del sistema. Permite elegir **Español** o **English**; la preferencia se guarda junto con el resto de la configuración. También permite elegir presets retro —incluidos **Fuego**, **RGB spectrum**, **Bosque eléctrico**, **Océano profundo**, **Violeta neón**, **Terminal fósforo** y **Monocromo**—, editar sus cuatro colores y activar una evolución cromática gradual.
 
 El motor también expone controles avanzados para densidad de ondas, pulso radial, giro, brillo, contraste, calidad de renderizado, FPS objetivo, separación y opacidad de scanlines, espejo horizontal/vertical, viñeta CRT y posición del origen. El origen puede aleatorizarse automáticamente en cada ejecución o fijarse con coordenadas X/Y.
 

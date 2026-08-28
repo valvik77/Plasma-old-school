@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Windows.Forms;
 
 namespace PlasmaOldSchool
@@ -49,7 +51,7 @@ namespace PlasmaOldSchool
                 }
                 else
                 {
-                    Application.Run(new ConfigForm());
+                    RunConfiguration();
                 }
             }
             catch (Exception ex)
@@ -60,6 +62,23 @@ namespace PlasmaOldSchool
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+        }
+
+        private static void RunConfiguration()
+        {
+            string executableDirectory = Path.GetDirectoryName(Application.ExecutablePath);
+            string configurationExecutable = Path.Combine(executableDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "PlasmaOldSchool.Config.exe");
+            if (File.Exists(configurationExecutable))
+            {
+                ProcessStartInfo startInfo = new ProcessStartInfo(configurationExecutable);
+                startInfo.UseShellExecute = true;
+                Process.Start(startInfo);
+                return;
+            }
+
+            // Mantiene la configuración clásica como respaldo si se distribuye
+            // únicamente el archivo .scr sin la carpeta WinUI 3 adjunta.
+            Application.Run(new ConfigForm());
         }
 
         private static LaunchRequest ParseArguments(string[] args)

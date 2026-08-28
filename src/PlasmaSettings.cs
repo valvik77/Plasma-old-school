@@ -93,6 +93,7 @@ namespace PlasmaOldSchool
         private const string RegistryPath = @"Software\PlasmaOldSchoolScreenSaver";
 
         public string PaletteKey = "amiga";
+        public string Language = "es";
         public Color[] Colors = PaletteCatalog.CopyColors("amiga");
         public double MotionSpeed = 1.0;
         public double SpatialScale = 1.0;
@@ -132,6 +133,7 @@ namespace PlasmaOldSchool
                     }
 
                     settings.PaletteKey = Convert.ToString(key.GetValue("Palette", settings.PaletteKey), CultureInfo.InvariantCulture);
+                    settings.Language = Convert.ToString(key.GetValue("Language", settings.Language), CultureInfo.InvariantCulture);
                     settings.MotionSpeed = ReadDouble(key, "MotionSpeed", settings.MotionSpeed);
                     settings.SpatialScale = ReadDouble(key, "SpatialScale", settings.SpatialScale);
                     settings.Warp = ReadDouble(key, "Warp", settings.Warp);
@@ -185,6 +187,7 @@ namespace PlasmaOldSchool
             settings.OriginX = Clamp(settings.OriginX, 0.1, 0.9);
             settings.OriginY = Clamp(settings.OriginY, 0.1, 0.9);
             settings.Pixelation = Clamp(settings.Pixelation, 1, 20);
+            settings.Language = String.Equals(settings.Language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "es";
             return settings;
         }
 
@@ -198,6 +201,7 @@ namespace PlasmaOldSchool
                 }
 
                 key.SetValue("Palette", PaletteKey, RegistryValueKind.String);
+                key.SetValue("Language", Language, RegistryValueKind.String);
                 key.SetValue("MotionSpeed", MotionSpeed.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
                 key.SetValue("SpatialScale", SpatialScale.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);
                 key.SetValue("Warp", Warp.ToString(CultureInfo.InvariantCulture), RegistryValueKind.String);

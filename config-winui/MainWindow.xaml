@@ -1,0 +1,25 @@
+<Window
+    x:Class="PlasmaOldSchool.Config.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:PlasmaOldSchool.Config"
+    Title="Plasma Old School">
+    <Grid x:Name="Root" Padding="28" RowSpacing="18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid ColumnSpacing="18">
+            <StackPanel><TextBlock Text="PLASMA OLD SCHOOL" Style="{StaticResource TitleTextBlockStyle}"/><TextBlock x:Name="Subtitle" Opacity="0.7"/></StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right"><TextBlock x:Name="LanguageLabel"/><ComboBox x:Name="Language" Width="150" SelectionChanged="LanguageChanged"><ComboBoxItem Content="Español"/><ComboBoxItem Content="English"/></ComboBox></StackPanel>
+        </Grid>
+        <NavigationView x:Name="Navigation" Grid.Row="1" PaneDisplayMode="Left" IsSettingsVisible="False" SelectionChanged="NavigationChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="GeneralItem" Tag="general" Icon="Home" IsSelected="True"/>
+                <NavigationViewItem x:Name="DisplayItem" Tag="display" Icon="View"/>
+                <NavigationViewItem x:Name="EngineItem" Tag="engine" Icon="AllApps"/>
+            </NavigationView.MenuItems>
+            <Frame x:Name="ContentFrame"/>
+        </NavigationView>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button x:Name="TestButton" Click="TestClicked"/><Button x:Name="CancelButton" Click="CancelClicked"/><Button x:Name="SaveButton" Style="{StaticResource AccentButtonStyle}" Click="SaveClicked"/>
+        </StackPanel>
+    </Grid>
+</Window>
