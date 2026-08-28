@@ -12,6 +12,7 @@ namespace PlasmaOldSchool
         private readonly IntPtr _previewParent;
         private readonly Action _requestExit;
         private GpuPlasmaRenderer _gpuRenderer;
+        private Direct3DPlasmaRenderer _direct3DRenderer;
         private Point _initialMousePosition;
         private DateTime _shownAt;
 
@@ -60,10 +61,33 @@ namespace PlasmaOldSchool
 
         internal bool TryInitializeGpu()
         {
+            if (_direct3DRenderer != null)
+            {
+                return true;
+            }
             if (_gpuRenderer != null)
             {
                 return true;
             }
+            try
+            {
+                _direct3DRenderer = new Direct3DPlasmaRenderer(this);
+                return true;
+            }
+            catch
+            {
+                if (_direct3DRenderer != null)
+                {
+                    _direct3DRenderer.Dispose();
+                    _direct3DRenderer = null;
+                }
+            }
+            return TryInitializeOpenGl();
+        }
+
+        private bool TryInitializeOpenGl()
+        {
+            if (_gpuRenderer != null) return true;
             try
             {
                 _gpuRenderer = new GpuPlasmaRenderer(this);
@@ -82,6 +106,11 @@ namespace PlasmaOldSchool
 
         internal void DisableGpu()
         {
+            if (_direct3DRenderer != null)
+            {
+                _direct3DRenderer.Dispose();
+                _direct3DRenderer = null;
+            }
             if (_gpuRenderer != null)
             {
                 _gpuRenderer.Dispose();
@@ -108,6 +137,13 @@ namespace PlasmaOldSchool
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            if (_direct3DRenderer != null)
+            {
+                if (_direct3DRenderer.Render(_engine, ClientSize.Width, ClientSize.Height)) return;
+                _direct3DRenderer.Dispose();
+                _direct3DRenderer = null;
+                TryInitializeOpenGl();
+            }
             if (_gpuRenderer != null)
             {
                 _gpuRenderer.Render(_engine, ClientSize.Width, ClientSize.Height);
@@ -200,6 +236,11 @@ namespace PlasmaOldSchool
             {
                 _gpuRenderer.Dispose();
                 _gpuRenderer = null;
+            }
+            if (disposing && _direct3DRenderer != null)
+            {
+                _direct3DRenderer.Dispose();
+                _direct3DRenderer = null;
             }
             base.Dispose(disposing);
         }

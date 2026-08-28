@@ -12,7 +12,8 @@ namespace PlasmaOldSchool
         FullScreen,
         Preview,
         SelfTest,
-        GpuSelfTest
+        GpuSelfTest,
+        Direct3DSelfTest
     }
 
     internal sealed class LaunchRequest
@@ -40,6 +41,10 @@ namespace PlasmaOldSchool
                 else if (request.Mode == LaunchMode.GpuSelfTest)
                 {
                     RunGpuSelfTest();
+                }
+                else if (request.Mode == LaunchMode.Direct3DSelfTest)
+                {
+                    RunDirect3DSelfTest();
                 }
                 else if (request.Mode == LaunchMode.FullScreen)
                 {
@@ -101,6 +106,12 @@ namespace PlasmaOldSchool
             if (first == "/gputest" || first == "-gputest")
             {
                 request.Mode = LaunchMode.GpuSelfTest;
+                return request;
+            }
+
+            if (first == "/d3dtest" || first == "-d3dtest")
+            {
+                request.Mode = LaunchMode.Direct3DSelfTest;
                 return request;
             }
 
@@ -236,6 +247,34 @@ namespace PlasmaOldSchool
             catch
             {
                 Environment.ExitCode = 3;
+            }
+        }
+
+        private static void RunDirect3DSelfTest()
+        {
+            try
+            {
+                using (Form host = new Form())
+                {
+                    host.ShowInTaskbar = false;
+                    host.ClientSize = new System.Drawing.Size(320, 180);
+                    host.CreateControl();
+                    using (PlasmaEngine engine = new PlasmaEngine(new PlasmaSettings()))
+                    using (Direct3DPlasmaRenderer renderer = new Direct3DPlasmaRenderer(host))
+                    {
+                        engine.EnableGpuMode();
+                        if (!renderer.Render(engine, 320, 180))
+                        {
+                            Environment.ExitCode = 4;
+                            return;
+                        }
+                    }
+                }
+                Environment.ExitCode = 0;
+            }
+            catch
+            {
+                Environment.ExitCode = 4;
             }
         }
     }

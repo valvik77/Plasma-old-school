@@ -51,7 +51,7 @@ namespace PlasmaOldSchool
             _colorSpeed = Track(10, 300, 5); _colorSpeedValue = Value(); Slider(palette, "color_speed", _colorSpeed, _colorSpeedValue);
 
             TableLayoutPanel motionCard = Card(_generalStack, "motion_section");
-            _motion = Track(15, 250, 5); _motionValue = Value(); Slider(motionCard, "motion_speed", _motion, _motionValue);
+            _motion = Track(1, 150, 1); _motionValue = Value(); Slider(motionCard, "motion_speed", _motion, _motionValue);
             _scale = Track(45, 220, 5); _scaleValue = Value(); Slider(motionCard, "spatial_scale", _scale, _scaleValue);
             _warp = Track(0, 100, 5); _warpValue = Value(); Slider(motionCard, "warp", _warp, _warpValue);
             _pixelation = Track(1, 20, 1); _pixelationValue = Value(); Slider(motionCard, "pixelation", _pixelation, _pixelationValue);
@@ -179,7 +179,7 @@ namespace PlasmaOldSchool
             _language.SelectedIndex = String.Equals(_settings.Language, "en", StringComparison.OrdinalIgnoreCase) ? 1 : 0; SelectPalette(_settings.PaletteKey);
             _quality.Items.Clear(); _quality.Items.Add(T("quality_low")); _quality.Items.Add(T("quality_classic")); _quality.Items.Add(T("quality_high"));
             for (int i = 0; i < 4; i++) SetColor(i, _settings.Colors[i]);
-            _cycle.Checked = _settings.ColorCycle; _colorSpeed.Value = Clamp((int)Math.Round(_settings.ColorCycleSpeed * 100), 10, 300); _motion.Value = Clamp((int)Math.Round(_settings.MotionSpeed * 100), 15, 250); _scale.Value = Clamp((int)Math.Round(_settings.SpatialScale * 100), 45, 220); _warp.Value = Clamp((int)Math.Round(_settings.Warp * 100), 0, 100); _pixelation.Value = Clamp(_settings.Pixelation, 1, 20); _scanlines.Checked = _settings.Scanlines;
+            _cycle.Checked = _settings.ColorCycle; _colorSpeed.Value = Clamp((int)Math.Round(_settings.ColorCycleSpeed * 100), 10, 300); _motion.Value = Clamp((int)Math.Round(_settings.MotionSpeed * 100), 1, 150); _scale.Value = Clamp((int)Math.Round(_settings.SpatialScale * 100), 45, 220); _warp.Value = Clamp((int)Math.Round(_settings.Warp * 100), 0, 100); _pixelation.Value = Clamp(_settings.Pixelation, 1, 20); _scanlines.Checked = _settings.Scanlines;
             _density.Value = Clamp((int)Math.Round(_settings.WaveDensity * 100), 50, 200); _pulse.Value = Clamp((int)Math.Round(_settings.RadialPulse * 100), 0, 200); _rotation.Value = Clamp((int)Math.Round(_settings.RotationSpeed * 100), 0, 200); _brightness.Value = Clamp((int)Math.Round(_settings.Brightness * 100), 50, 160); _contrast.Value = Clamp((int)Math.Round(_settings.Contrast * 100), 50, 200);
             _quality.SelectedIndex = Clamp(_settings.RenderQuality - 1, 0, 2); _fps.Value = Clamp(_settings.TargetFps, 20, 75); _saving.Checked = _settings.PowerSaving; _lineSpacing.Value = Clamp(_settings.ScanlineSpacing, 2, 8); _lineOpacity.Value = Clamp(_settings.ScanlineOpacity, 0, 100); _mirrorH.Checked = _settings.MirrorHorizontal; _mirrorV.Checked = _settings.MirrorVertical; _vignette.Checked = _settings.Vignette;
             _random.Checked = _settings.RandomOrigin; _moving.Checked = _settings.MovingOrigin; _originX.Value = Clamp((int)Math.Round(_settings.OriginX * 100), 10, 90); _originY.Value = Clamp((int)Math.Round(_settings.OriginY * 100), 10, 90);

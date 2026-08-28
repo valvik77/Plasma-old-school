@@ -2,7 +2,7 @@
 
 Salvapantallas nativo de Windows inspirado en los plasmas de Amiga y la demoscene. Funciona sin conexión y no necesita instalar bibliotecas adicionales.
 
-Cuando el controlador lo permite, el salvapantallas usa un shader OpenGL para calcular el plasma en la GPU. Si OpenGL 2.0 no está disponible, cambia automáticamente al renderizador CPU.
+El salvapantallas prioriza un renderizador Direct3D 11 nativo, integrado de forma experimental para aprovechar mejor la pila gráfica de Windows. Si no está disponible o falla, cambia automáticamente a OpenGL y, como último respaldo, al renderizador CPU.
 
 El shader usa cuatro ondas de estilo demoscene: bandas verticales, diagonal rotatoria, ojo circular orbital y pulso radial. Incluye pixelado por bloques y ciclo continuo de paleta para conservar el carácter del plasma web de referencia.
 
@@ -24,9 +24,9 @@ Para abrir su configuración:
 
 ## Instalarlo
 
-1. Conserva `dist\PlasmaOldSchool.scr` en una ubicación estable.
-2. Haz clic derecho sobre el archivo. En Windows 11 quizá debas elegir **Mostrar más opciones**.
-3. Selecciona **Instalar** y elige **PlasmaOldSchool** en la configuración de salvapantallas de Windows.
+Ejecuta `release\PlasmaOldSchoolSetup.exe`. El instalador copia el paquete completo a una ubicación estable del usuario, registra el salvapantallas y añade accesos para configurarlo, probarlo o desinstalarlo. No necesita permisos de administrador.
+
+Como alternativa manual, conserva la carpeta `dist` completa en una ubicación estable, haz clic derecho sobre `PlasmaOldSchool.scr` y selecciona **Instalar**. No copies únicamente el `.scr` si quieres conservar Direct3D 11 y la configuración WinUI 3.
 
 El archivo admite los modos estándar que usa Windows:
 
@@ -42,7 +42,7 @@ El motor también expone controles avanzados para densidad de ondas, pulso radia
 
 El modo **Ahorro** está activado por defecto y limita la presentación a 30 FPS, reduciendo el consumo y el ruido de los ventiladores. Puede desactivarse desde la configuración si se prefiere priorizar fluidez.
 
-Cuando se usa la GPU, la opción **Calidad** controla además la resolución interna del shader (25 %, 38 % o 50 % de la pantalla) y lo escala con píxel duro. Así conserva el acabado retro mientras reduce de forma notable el trabajo gráfico; los controladores que no admitan framebuffer objects conservan el renderizado GPU normal como respaldo.
+Cuando se usa la GPU, la opción **Calidad** controla además la resolución interna del shader (25 %, 38 % o 50 % de la pantalla) y lo escala con píxel duro. Tanto Direct3D 11 como OpenGL aplican esta reducción, conservando el acabado retro mientras disminuyen de forma notable el trabajo gráfico.
 
 La configuración se guarda para el usuario actual en `HKCU\Software\PlasmaOldSchoolScreenSaver`.
 
@@ -52,4 +52,6 @@ La configuración se guarda para el usuario actual en `HKCU\Software\PlasmaOldSc
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-El script usa el compilador de .NET Framework incluido con Windows y genera `dist\PlasmaOldSchool.scr`.
+El script usa .NET Framework para el salvapantallas, MSBuild para la configuración WinUI 3, las herramientas C++ de Visual Studio para `PlasmaD3D11.dll` e Inno Setup 7 para el instalador. Genera el paquete en `dist` y `release\PlasmaOldSchoolSetup.exe`.
+
+Las comprobaciones internas pueden ejecutarse sobre `PlasmaOldSchool.exe`: `/test` valida la CPU, `/gputest` OpenGL y `/d3dtest` Direct3D 11. Un resultado correcto devuelve el código de salida 0.

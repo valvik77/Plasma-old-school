@@ -95,7 +95,7 @@ namespace PlasmaOldSchool
         public string PaletteKey = "amiga";
         public string Language = "es";
         public Color[] Colors = PaletteCatalog.CopyColors("amiga");
-        public double MotionSpeed = 1.0;
+        public double MotionSpeed = 0.35;
         public double SpatialScale = 1.0;
         public double Warp = 0.65;
         public bool Scanlines = true;
@@ -132,17 +132,18 @@ namespace PlasmaOldSchool
                         return settings;
                     }
 
+                    bool legacyPercentageValues = UsesLegacyPercentageValues(key);
                     settings.PaletteKey = Convert.ToString(key.GetValue("Palette", settings.PaletteKey), CultureInfo.InvariantCulture);
                     settings.Language = Convert.ToString(key.GetValue("Language", settings.Language), CultureInfo.InvariantCulture);
-                    settings.MotionSpeed = ReadDouble(key, "MotionSpeed", settings.MotionSpeed);
-                    settings.SpatialScale = ReadDouble(key, "SpatialScale", settings.SpatialScale);
-                    settings.Warp = ReadDouble(key, "Warp", settings.Warp);
+                    settings.MotionSpeed = ReadPercentageCompatibleDouble(key, "MotionSpeed", settings.MotionSpeed, legacyPercentageValues);
+                    settings.SpatialScale = ReadPercentageCompatibleDouble(key, "SpatialScale", settings.SpatialScale, legacyPercentageValues);
+                    settings.Warp = ReadPercentageCompatibleDouble(key, "Warp", settings.Warp, legacyPercentageValues);
                     settings.ColorCycleSpeed = ReadDouble(key, "ColorCycleSpeed", settings.ColorCycleSpeed);
-                    settings.WaveDensity = ReadDouble(key, "WaveDensity", settings.WaveDensity);
-                    settings.RadialPulse = ReadDouble(key, "RadialPulse", settings.RadialPulse);
-                    settings.RotationSpeed = ReadDouble(key, "RotationSpeed", settings.RotationSpeed);
-                    settings.Brightness = ReadDouble(key, "Brightness", settings.Brightness);
-                    settings.Contrast = ReadDouble(key, "Contrast", settings.Contrast);
+                    settings.WaveDensity = ReadPercentageCompatibleDouble(key, "WaveDensity", settings.WaveDensity, legacyPercentageValues);
+                    settings.RadialPulse = ReadPercentageCompatibleDouble(key, "RadialPulse", settings.RadialPulse, legacyPercentageValues);
+                    settings.RotationSpeed = ReadPercentageCompatibleDouble(key, "RotationSpeed", settings.RotationSpeed, legacyPercentageValues);
+                    settings.Brightness = ReadPercentageCompatibleDouble(key, "Brightness", settings.Brightness, legacyPercentageValues);
+                    settings.Contrast = ReadPercentageCompatibleDouble(key, "Contrast", settings.Contrast, legacyPercentageValues);
                     settings.RenderQuality = ReadInt(key, "RenderQuality", settings.RenderQuality);
                     settings.TargetFps = ReadInt(key, "TargetFps", settings.TargetFps);
                     settings.PowerSaving = ReadBool(key, "PowerSaving", settings.PowerSaving);
@@ -159,10 +160,17 @@ namespace PlasmaOldSchool
                     settings.MovingOrigin = ReadBool(key, "MovingOrigin", settings.MovingOrigin);
                     settings.Pixelation = ReadInt(key, "Pixelation", settings.Pixelation);
 
-                    int i;
-                    for (i = 0; i < 4; i++)
+                    if (!String.Equals(settings.PaletteKey, "custom", StringComparison.OrdinalIgnoreCase))
                     {
-                        settings.Colors[i] = ReadColor(key, "Color" + (i + 1).ToString(CultureInfo.InvariantCulture), settings.Colors[i]);
+                        settings.Colors = PaletteCatalog.CopyColors(settings.PaletteKey);
+                    }
+                    else
+                    {
+                        int i;
+                        for (i = 0; i < 4; i++)
+                        {
+                            settings.Colors[i] = ReadColor(key, "Color" + (i + 1).ToString(CultureInfo.InvariantCulture), settings.Colors[i]);
+                        }
                     }
                 }
             }
@@ -171,7 +179,7 @@ namespace PlasmaOldSchool
                 // Si el registro no está disponible se usan valores seguros.
             }
 
-            settings.MotionSpeed = Clamp(settings.MotionSpeed, 0.15, 2.5);
+            settings.MotionSpeed = Clamp(settings.MotionSpeed, 0.01, 1.5);
             settings.SpatialScale = Clamp(settings.SpatialScale, 0.45, 2.2);
             settings.Warp = Clamp(settings.Warp, 0.0, 1.0);
             settings.ColorCycleSpeed = Clamp(settings.ColorCycleSpeed, 0.1, 3.0);
@@ -243,6 +251,30 @@ namespace PlasmaOldSchool
             double value;
             string text = Convert.ToString(key.GetValue(name, fallback.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
             return Double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ? value : fallback;
+        }
+
+        private static double ReadPercentageCompatibleDouble(RegistryKey key, string name, double fallback, bool legacyPercentageValues)
+        {
+            double value = ReadDouble(key, name, fallback);
+            // Las primeras versiones de la ventana WinUI guardaban porcentajes
+            // enteros (100) donde el motor esperaba factores decimales (1.0).
+            if (legacyPercentageValues)
+            {
+                value /= 100.0;
+            }
+            return value;
+        }
+
+        private static bool UsesLegacyPercentageValues(RegistryKey key)
+        {
+            return ReadDouble(key, "MotionSpeed", 0.35) > 2.5 ||
+                ReadDouble(key, "SpatialScale", 1.0) > 3.0 ||
+                ReadDouble(key, "Warp", 0.65) > 1.0 ||
+                ReadDouble(key, "WaveDensity", 1.0) > 2.0 ||
+                ReadDouble(key, "RadialPulse", 1.0) > 2.0 ||
+                ReadDouble(key, "RotationSpeed", 0.44) > 2.0 ||
+                ReadDouble(key, "Brightness", 1.0) > 1.6 ||
+                ReadDouble(key, "Contrast", 1.0) > 2.0;
         }
 
         private static bool ReadBool(RegistryKey key, string name, bool fallback)
