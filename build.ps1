@@ -1,3 +1,7 @@
+param(
+    [switch]$NoInstaller
+)
+
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -86,7 +90,7 @@ if (Test-Path -LiteralPath $direct3DProject) {
     Copy-Item -LiteralPath $direct3DOutput -Destination (Join-Path $outputDirectory 'PlasmaD3D11.dll') -Force
 }
 
-if (Test-Path -LiteralPath $installerScript) {
+if (-not $NoInstaller -and (Test-Path -LiteralPath $installerScript)) {
     $innoCompiler = $null
     $innoCandidates = @(
         'C:\Program Files\Inno Setup 7\ISCC.exe',
@@ -115,6 +119,6 @@ if (Test-Path -LiteralPath $installerScript) {
     if ($LASTEXITCODE -ne 0) { throw "La creación del instalador terminó con el código $LASTEXITCODE." }
 }
 Write-Host "Creado: $outputFile"
-if (Test-Path -LiteralPath (Join-Path $releaseDirectory 'PlasmaOldSchoolSetup.exe')) {
+if (-not $NoInstaller -and (Test-Path -LiteralPath (Join-Path $releaseDirectory 'PlasmaOldSchoolSetup.exe'))) {
     Write-Host "Instalador: $(Join-Path $releaseDirectory 'PlasmaOldSchoolSetup.exe')"
 }

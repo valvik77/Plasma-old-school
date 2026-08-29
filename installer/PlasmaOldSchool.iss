@@ -40,11 +40,11 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "..\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\*"; DestDir: "{app}"; Excludes: "PlasmaOldSchool.scr"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\dist\PlasmaOldSchool.scr"; DestDir: "{sys}"; DestName: "PlasmaOldSchool.scr"; Flags: ignoreversion restartreplace
 
 [InstallDelete]
-Type: filesandordirs; Name: "{localappdata}\Programs\PlasmaOldSchool"
+Type: files; Name: "{app}\PlasmaOldSchool.scr"
 
 [Registry]
 Root: HKLM64; Subkey: "Software\Valvik\PlasmaOldSchool"; ValueType: string; ValueName: "InstallLocation"; ValueData: "{app}"; Flags: uninsdeletekey

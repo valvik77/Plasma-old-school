@@ -54,4 +54,8 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 El script usa .NET Framework para el salvapantallas, MSBuild para la configuración WinUI 3, las herramientas C++ de Visual Studio para `PlasmaD3D11.dll` e Inno Setup 7 para el instalador. Genera el paquete en `dist` y `release\PlasmaOldSchoolSetup.exe`. Los binarios públicos se generan sin una firma Authenticode personal.
 
+## Licencia
+
+El proyecto se distribuye bajo la [licencia MIT](LICENSE).
+
 Las comprobaciones internas pueden ejecutarse sobre `PlasmaOldSchool.exe`: `/test` valida la CPU, `/gputest` OpenGL y `/d3dtest` Direct3D 11. Un resultado correcto devuelve el código de salida 0.

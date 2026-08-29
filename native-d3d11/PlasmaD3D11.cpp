@@ -17,7 +17,9 @@ struct FrameData {
     float scanlineOpacity, seed;
     int colorCycle, movingOrigin;
     int scanlines, vignette;
-    float renderScale, padding;
+    float renderScale, rgbPaletteTime;
+    int rgbPaletteCycle;
+    float padding, padding2, padding3;
 };
 
 static const char* ShaderSource = R"(
@@ -25,11 +27,12 @@ cbuffer Frame : register(b0) {
  float2 resolution; float time; float scale; float2 origin; float warp; float density;
  float pulse; float rotation; float brightness; float contrast; float phaseA; float phaseB; float phaseC; float colorShift;
  float4 color0; float4 color1; float4 color2; float4 color3; float2 mirror; float pixelBlock; float scanlineSpacing;
- float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float padding;
+ float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float rgbPaletteTime; int rgbPaletteCycle; float padding; float padding2; float padding3;
 };
 struct VSOut { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; };
 VSOut VS(uint id:SV_VertexID) { VSOut o; o.uv=float2((id<<1)&2,id&2); o.pos=float4(o.uv*float2(2,-2)+float2(-1,1),0,1); return o; }
-float3 palette(float v) { float p=frac(v)*4; int i=(int)floor(p); float a=smoothstep(0,1,frac(p)); if(i==0)return lerp(color0.rgb,color1.rgb,a); if(i==1)return lerp(color1.rgb,color2.rgb,a); if(i==2)return lerp(color2.rgb,color3.rgb,a); return lerp(color3.rgb,color0.rgb,a); }
+float3 animatePaletteColor(float3 baseColor,float phase) { if(rgbPaletteCycle==0)return baseColor; float angle=frac(phase)*6.28318531; float cosine=cos(angle),sine=sin(angle); float luminance=dot(baseColor,float3(.299,.587,.114)); float chromaI=dot(baseColor,float3(.596,-.274,-.322)); float chromaQ=dot(baseColor,float3(.211,-.523,.312)); float rotatedI=chromaI*cosine-chromaQ*sine; float rotatedQ=chromaI*sine+chromaQ*cosine; return saturate(float3(luminance+.956*rotatedI+.621*rotatedQ,luminance-.272*rotatedI-.647*rotatedQ,luminance-1.106*rotatedI+1.703*rotatedQ)); }
+float3 palette(float v) { float p=frac(v)*4; int i=(int)floor(p); float a=smoothstep(0,1,frac(p)); float3 c0=animatePaletteColor(color0.rgb,rgbPaletteTime); float3 c1=animatePaletteColor(color1.rgb,rgbPaletteTime+.25); float3 c2=animatePaletteColor(color2.rgb,rgbPaletteTime+.5); float3 c3=animatePaletteColor(color3.rgb,rgbPaletteTime+.75); if(i==0)return lerp(c0,c1,a); if(i==1)return lerp(c1,c2,a); if(i==2)return lerp(c2,c3,a); return lerp(c3,c0,a); }
 float4 PS(VSOut input):SV_TARGET {
  float2 sc=input.uv*resolution; if(mirror.x<0)sc.x=resolution.x-sc.x; if(mirror.y<0)sc.y=resolution.y-sc.y;
  float2 fc=floor(sc/max(1,pixelBlock))*max(1,pixelBlock)+pixelBlock*.5; float zoom=(160/resolution.x)*scale; float2 p=fc*zoom;
@@ -39,7 +42,7 @@ float4 PS(VSOut input):SV_TARGET {
  float extra=.5+.5*sin((p.x+p.y)/(11/d)+time*.7+phaseC); float value=lerp(b,(b+extra)*.5,saturate(warp*.35)); if(colorCycle!=0)value+=colorShift;
  float3 c=(palette(value)-.5)*contrast+.5; c*=brightness;
  if(scanlines!=0 && fmod(sc.y,scanlineSpacing)>scanlineSpacing-1)c*=1-scanlineOpacity;
- if(vignette!=0){float2 uv=input.uv;float edge=min(min(uv.x,1-uv.x),min(uv.y,1-uv.y));c*=lerp(.62,1,smoothstep(0,.36,edge));}
+ if(vignette!=0){float2 vignettePoint=(input.uv-float2(.5,.5))*float2(resolution.x/resolution.y,1);float vignetteDistance=length(vignettePoint);c*=lerp(1,.42,smoothstep(.32,.72,vignetteDistance));}
  return float4(saturate(c),1);
 })";
 
@@ -50,7 +53,7 @@ cbuffer Frame : register(b0) {
  float2 resolution; float time; float scale; float2 origin; float warp; float density;
  float pulse; float rotation; float brightness; float contrast; float phaseA; float phaseB; float phaseC; float colorShift;
  float4 color0; float4 color1; float4 color2; float4 color3; float2 mirror; float pixelBlock; float scanlineSpacing;
- float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float padding;
+ float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float rgbPaletteTime; int rgbPaletteCycle; float padding; float padding2; float padding3;
 };
 struct VSOut { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; };
 float4 PS(VSOut input):SV_TARGET {

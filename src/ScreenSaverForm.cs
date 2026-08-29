@@ -72,6 +72,7 @@ namespace PlasmaOldSchool
             try
             {
                 _direct3DRenderer = new Direct3DPlasmaRenderer(this);
+                SetGpuPresentation(true);
                 return true;
             }
             catch
@@ -91,6 +92,7 @@ namespace PlasmaOldSchool
             try
             {
                 _gpuRenderer = new GpuPlasmaRenderer(this);
+                SetGpuPresentation(true);
                 return true;
             }
             catch
@@ -100,6 +102,7 @@ namespace PlasmaOldSchool
                     _gpuRenderer.Dispose();
                     _gpuRenderer = null;
                 }
+                SetGpuPresentation(false);
                 return false;
             }
         }
@@ -116,6 +119,18 @@ namespace PlasmaOldSchool
                 _gpuRenderer.Dispose();
                 _gpuRenderer = null;
             }
+            SetGpuPresentation(false);
+        }
+
+        private void SetGpuPresentation(bool enabled)
+        {
+            // Direct3D/OpenGL presentan directamente en la ventana. El búfer
+            // de WinForms debe quedar desactivado o puede componerse después
+            // de la GPU y mostrar durante un frame su superficie negra.
+            DoubleBuffered = !enabled;
+            SetStyle(ControlStyles.OptimizedDoubleBuffer, !enabled);
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            UpdateStyles();
         }
 
         protected override void OnShown(EventArgs e)
@@ -181,12 +196,17 @@ namespace PlasmaOldSchool
                 graphics.CompositingMode = CompositingMode.SourceOver;
                 using (GraphicsPath path = new GraphicsPath())
                 {
-                    path.AddRectangle(ClientRectangle);
+                    float diameter = (float)Math.Sqrt(ClientSize.Width * ClientSize.Width + ClientSize.Height * ClientSize.Height);
+                    path.AddEllipse(
+                        ClientSize.Width / 2.0f - diameter / 2.0f,
+                        ClientSize.Height / 2.0f - diameter / 2.0f,
+                        diameter,
+                        diameter);
                     using (PathGradientBrush vignette = new PathGradientBrush(path))
                     {
                         vignette.CenterPoint = new PointF(ClientSize.Width / 2.0f, ClientSize.Height / 2.0f);
                         vignette.CenterColor = Color.FromArgb(0, 0, 0, 0);
-                        vignette.SurroundColors = new[] { Color.FromArgb(105, 0, 0, 0) };
+                        vignette.SurroundColors = new[] { Color.FromArgb(155, 0, 0, 0) };
                         graphics.FillRectangle(vignette, ClientRectangle);
                     }
                 }

@@ -19,7 +19,9 @@ namespace PlasmaOldSchool
             public float MirrorX, MirrorY, PixelBlock, ScanlineSpacing;
             public float ScanlineOpacity, Seed;
             public int ColorCycle, MovingOrigin, Scanlines, Vignette;
-            public float RenderScale, Padding1;
+            public float RenderScale, RgbPaletteTime;
+            public int RgbPaletteCycle;
+            public float Padding1, Padding2, Padding3;
         }
 
         private IntPtr _renderer;
@@ -41,7 +43,7 @@ namespace PlasmaOldSchool
             SetColor(engine.Colors[2], out data.C2R, out data.C2G, out data.C2B, out data.C2A); SetColor(engine.Colors[3], out data.C3R, out data.C3G, out data.C3B, out data.C3A);
             data.MirrorX = engine.MirrorHorizontal ? -1f : 1f; data.MirrorY = engine.MirrorVertical ? -1f : 1f; data.PixelBlock = engine.Pixelation; data.ScanlineSpacing = engine.ScanlineSpacing;
             data.ScanlineOpacity = engine.ScanlineOpacity / 255f; data.Seed = (float)engine.Seed; data.ColorCycle = engine.ColorCycle ? 1 : 0; data.MovingOrigin = engine.MovingOrigin ? 1 : 0; data.Scanlines = engine.Scanlines ? 1 : 0; data.Vignette = engine.Vignette ? 1 : 0;
-            data.RenderScale = (float)engine.GpuRenderScale;
+            data.RenderScale = (float)engine.GpuRenderScale; data.RgbPaletteTime = (float)engine.RgbPaletteTime; data.RgbPaletteCycle = 0;
             return RenderNative(_renderer, Math.Max(1, width), Math.Max(1, height), ref data) != 0;
         }
 

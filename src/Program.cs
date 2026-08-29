@@ -86,9 +86,11 @@ namespace PlasmaOldSchool
                 return;
             }
 
-            // Mantiene la configuración clásica como respaldo si se distribuye
-            // únicamente el archivo .scr sin la carpeta WinUI 3 adjunta.
-            Application.Run(new ConfigForm());
+            MessageBox.Show(
+                "No se encontró la aplicación de configuración WinUI 3. Reinstala Plasma Old School para restaurar sus archivos.",
+                "Plasma Old School",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
 
         private static string ResolveRuntimeDirectory()
@@ -222,7 +224,49 @@ namespace PlasmaOldSchool
                 }
             }
             VerifyCpuPixelation();
+            if (!VerifySettingsValidationAndPersistence())
+            {
+                Environment.ExitCode = 5;
+                return;
+            }
             Environment.ExitCode = 0;
+        }
+
+        private static bool VerifySettingsValidationAndPersistence()
+        {
+            string testPath = @"Software\PlasmaOldSchoolScreenSaver\Tests\" + Guid.NewGuid().ToString("N");
+            try
+            {
+                PlasmaSettings saved = new PlasmaSettings();
+                saved.PaletteKey = "custom";
+                saved.Colors = new[] { System.Drawing.Color.Black, System.Drawing.Color.Red, System.Drawing.Color.Lime, System.Drawing.Color.Blue };
+                saved.MotionSpeed = -9.0;
+                saved.TargetFps = 999;
+                saved.Pixelation = -4;
+                saved.Validate();
+                if (saved.MotionSpeed != 0.01 || saved.TargetFps != 75 || saved.Pixelation != 1)
+                {
+                    return false;
+                }
+
+                saved.MotionSpeed = 0.08;
+                saved.TargetFps = 40;
+                saved.Pixelation = 6;
+                saved.SaveToRegistryPath(testPath);
+                PlasmaSettings loaded = PlasmaSettings.LoadFromRegistryPath(testPath);
+                return loaded.PaletteKey == "custom" &&
+                    Math.Abs(loaded.MotionSpeed - 0.08) < 0.0001 &&
+                    loaded.TargetFps == 40 && loaded.Pixelation == 6 &&
+                    loaded.Colors[2].ToArgb() == System.Drawing.Color.Lime.ToArgb();
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                try { Registry.CurrentUser.DeleteSubKeyTree(testPath, false); } catch { }
+            }
         }
 
         private static void VerifyCpuPixelation()

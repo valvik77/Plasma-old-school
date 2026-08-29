@@ -90,6 +90,8 @@ namespace PlasmaOldSchool
         private int _seed;
         private int _colorCycle;
         private int _colorShift;
+        private int _rgbPaletteCycle;
+        private int _rgbPaletteTime;
         private int _scanlines;
         private int _scanlineSpacing;
         private int _scanlineOpacity;
@@ -152,6 +154,10 @@ namespace PlasmaOldSchool
             _uniform2f(_mirror, engine.MirrorHorizontal ? -1f : 1f, engine.MirrorVertical ? -1f : 1f);
             _uniform1i(_colorCycle, engine.ColorCycle ? 1 : 0);
             _uniform1f(_colorShift, (float)engine.ColorShift);
+            // Los cuatro colores ya llegan animados desde PlasmaEngine para
+            // que CPU, OpenGL y Direct3D produzcan exactamente la misma paleta.
+            _uniform1i(_rgbPaletteCycle, 0);
+            _uniform1f(_rgbPaletteTime, (float)engine.RgbPaletteTime);
             _uniform1i(_scanlines, engine.Scanlines && !reducedRendering ? 1 : 0);
             _uniform1f(_scanlineSpacing, engine.ScanlineSpacing);
             _uniform1f(_scanlineOpacity, engine.ScanlineOpacity / 255f);
@@ -259,6 +265,8 @@ namespace PlasmaOldSchool
             _seed = Uniform("uSeed");
             _colorCycle = Uniform("uColorCycle");
             _colorShift = Uniform("uColorShift");
+            _rgbPaletteCycle = Uniform("uRgbPaletteCycle");
+            _rgbPaletteTime = Uniform("uRgbPaletteTime");
             _scanlines = Uniform("uScanlines");
             _scanlineSpacing = Uniform("uScanlineSpacing");
             _scanlineOpacity = Uniform("uScanlineOpacity");
@@ -481,21 +489,39 @@ uniform vec2 uResolution;
 uniform float uTime, uScale, uWarp, uWaveDensity, uRadialPulse, uRotation;
 uniform float uBrightness, uContrast, uPhaseA, uPhaseB, uPhaseC, uSeed;
 uniform vec2 uOrigin, uMirror;
-uniform int uColorCycle, uScanlines, uVignette;
-uniform float uColorShift, uScanlineSpacing, uScanlineOpacity, uPixelBlock;
+uniform int uColorCycle, uRgbPaletteCycle, uScanlines, uVignette;
+uniform float uColorShift, uRgbPaletteTime, uScanlineSpacing, uScanlineOpacity, uPixelBlock;
 uniform int uMovingOrigin;
 uniform vec3 uColor0, uColor1, uColor2, uColor3;
 
+vec3 animatePaletteColor(vec3 baseColor, float phase) {
+  if (uRgbPaletteCycle == 0) return baseColor;
+  float angle = fract(phase) * 6.28318531;
+  float cosine = cos(angle);
+  float sine = sin(angle);
+  float luminance = dot(baseColor, vec3(0.299, 0.587, 0.114));
+  float chromaI = dot(baseColor, vec3(0.596, -0.274, -0.322));
+  float chromaQ = dot(baseColor, vec3(0.211, -0.523, 0.312));
+  float rotatedI = chromaI * cosine - chromaQ * sine;
+  float rotatedQ = chromaI * sine + chromaQ * cosine;
+  return clamp(vec3(luminance + 0.956 * rotatedI + 0.621 * rotatedQ,
+                    luminance - 0.272 * rotatedI - 0.647 * rotatedQ,
+                    luminance - 1.106 * rotatedI + 1.703 * rotatedQ), 0.0, 1.0);
+}
 vec3 palette(float value) {
   float wrapped = fract(value);
   if (wrapped < 0.0) wrapped += 1.0;
   float position = wrapped * 4.0;
   int index = int(floor(position));
   float amount = smoothstep(0.0, 1.0, fract(position));
-  if (index == 0) return mix(uColor0, uColor1, amount);
-  if (index == 1) return mix(uColor1, uColor2, amount);
-  if (index == 2) return mix(uColor2, uColor3, amount);
-  return mix(uColor3, uColor0, amount);
+  vec3 c0=animatePaletteColor(uColor0, uRgbPaletteTime);
+  vec3 c1=animatePaletteColor(uColor1, uRgbPaletteTime + 0.25);
+  vec3 c2=animatePaletteColor(uColor2, uRgbPaletteTime + 0.50);
+  vec3 c3=animatePaletteColor(uColor3, uRgbPaletteTime + 0.75);
+  if (index == 0) return mix(c0, c1, amount);
+  if (index == 1) return mix(c1, c2, amount);
+  if (index == 2) return mix(c2, c3, amount);
+  return mix(c3, c0, amount);
 }
 
 void main() {
@@ -532,8 +558,9 @@ void main() {
     if (line > uScanlineSpacing - 1.0) color *= 1.0 - uScanlineOpacity;
   }
   if (uVignette == 1) {
-    float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    color *= mix(0.62, 1.0, smoothstep(0.0, 0.36, edge));
+    vec2 vignettePoint = (uv - vec2(0.5)) * vec2(uResolution.x / uResolution.y, 1.0);
+    float vignetteDistance = length(vignettePoint);
+    color *= mix(1.0, 0.42, smoothstep(0.32, 0.72, vignetteDistance));
   }
   gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }";

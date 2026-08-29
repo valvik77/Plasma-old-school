@@ -5,11 +5,11 @@ using Microsoft.Win32;
 
 namespace PlasmaOldSchool
 {
-    internal sealed class PaletteDefinition
+    public sealed class PaletteDefinition
     {
-        public readonly string Key;
-        public readonly string DisplayName;
-        public readonly Color[] Colors;
+        public string Key { get; private set; }
+        public string DisplayName { get; private set; }
+        public Color[] Colors { get; private set; }
 
         public PaletteDefinition(string key, string displayName, params Color[] colors)
         {
@@ -24,9 +24,9 @@ namespace PlasmaOldSchool
         }
     }
 
-    internal static class PaletteCatalog
+    public static class PaletteCatalog
     {
-        internal static readonly PaletteDefinition[] Presets =
+        public static readonly PaletteDefinition[] Presets =
         {
             new PaletteDefinition("amiga", "Amiga sunset",
                 Color.FromArgb(18, 0, 47), Color.FromArgb(255, 20, 111),
@@ -64,7 +64,7 @@ namespace PlasmaOldSchool
             new PaletteDefinition("custom", "Personalizada")
         };
 
-        internal static PaletteDefinition Find(string key)
+        public static PaletteDefinition Find(string key)
         {
             int i;
             for (i = 0; i < Presets.Length; i++)
@@ -77,7 +77,7 @@ namespace PlasmaOldSchool
             return Presets[0];
         }
 
-        internal static Color[] CopyColors(string key)
+        public static Color[] CopyColors(string key)
         {
             PaletteDefinition definition = Find(key);
             if (definition.Colors == null || definition.Colors.Length != 4)
@@ -88,7 +88,7 @@ namespace PlasmaOldSchool
         }
     }
 
-    internal sealed class PlasmaSettings
+    public sealed class PlasmaSettings
     {
         private const string RegistryPath = @"Software\PlasmaOldSchoolScreenSaver";
 
@@ -100,6 +100,7 @@ namespace PlasmaOldSchool
         public double Warp = 0.65;
         public bool Scanlines = true;
         public bool ColorCycle = true;
+        public bool RgbPaletteCycle = false;
         public double ColorCycleSpeed = 1.0;
         public double WaveDensity = 1.0;
         public double RadialPulse = 1.0;
@@ -120,15 +121,21 @@ namespace PlasmaOldSchool
         public bool MovingOrigin = true;
         public int Pixelation = 1;
 
-        internal static PlasmaSettings Load()
+        public static PlasmaSettings Load()
+        {
+            return LoadFromRegistryPath(RegistryPath);
+        }
+
+        internal static PlasmaSettings LoadFromRegistryPath(string registryPath)
         {
             PlasmaSettings settings = new PlasmaSettings();
             try
             {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RegistryPath))
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(registryPath))
                 {
                     if (key == null)
                     {
+                        settings.Validate();
                         return settings;
                     }
 
@@ -151,6 +158,7 @@ namespace PlasmaOldSchool
                     settings.ScanlineOpacity = ReadInt(key, "ScanlineOpacity", settings.ScanlineOpacity);
                     settings.Scanlines = ReadBool(key, "Scanlines", settings.Scanlines);
                     settings.ColorCycle = ReadBool(key, "ColorCycle", settings.ColorCycle);
+                    settings.RgbPaletteCycle = ReadBool(key, "RgbPaletteCycle", settings.RgbPaletteCycle);
                     settings.MirrorHorizontal = ReadBool(key, "MirrorHorizontal", settings.MirrorHorizontal);
                     settings.MirrorVertical = ReadBool(key, "MirrorVertical", settings.MirrorVertical);
                     settings.Vignette = ReadBool(key, "Vignette", settings.Vignette);
@@ -179,29 +187,51 @@ namespace PlasmaOldSchool
                 // Si el registro no está disponible se usan valores seguros.
             }
 
-            settings.MotionSpeed = Clamp(settings.MotionSpeed, 0.01, 1.5);
-            settings.SpatialScale = Clamp(settings.SpatialScale, 0.45, 2.2);
-            settings.Warp = Clamp(settings.Warp, 0.0, 1.0);
-            settings.ColorCycleSpeed = Clamp(settings.ColorCycleSpeed, 0.1, 3.0);
-            settings.WaveDensity = Clamp(settings.WaveDensity, 0.5, 2.0);
-            settings.RadialPulse = Clamp(settings.RadialPulse, 0.0, 2.0);
-            settings.RotationSpeed = Clamp(settings.RotationSpeed, 0.0, 2.0);
-            settings.Brightness = Clamp(settings.Brightness, 0.5, 1.6);
-            settings.Contrast = Clamp(settings.Contrast, 0.5, 2.0);
-            settings.RenderQuality = Clamp(settings.RenderQuality, 1, 3);
-            settings.TargetFps = Clamp(settings.TargetFps, 20, 75);
-            settings.ScanlineSpacing = Clamp(settings.ScanlineSpacing, 2, 8);
-            settings.ScanlineOpacity = Clamp(settings.ScanlineOpacity, 0, 100);
-            settings.OriginX = Clamp(settings.OriginX, 0.1, 0.9);
-            settings.OriginY = Clamp(settings.OriginY, 0.1, 0.9);
-            settings.Pixelation = Clamp(settings.Pixelation, 1, 20);
-            settings.Language = String.Equals(settings.Language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "es";
+            settings.Validate();
             return settings;
         }
 
-        internal void Save()
+        public void Validate()
         {
-            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(RegistryPath))
+            PaletteDefinition palette = PaletteCatalog.Find(PaletteKey);
+            PaletteKey = palette.Key;
+            if (Colors == null || Colors.Length != 4)
+            {
+                Colors = PaletteCatalog.CopyColors(PaletteKey);
+            }
+            if (!String.Equals(PaletteKey, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                Colors = PaletteCatalog.CopyColors(PaletteKey);
+            }
+
+            MotionSpeed = Clamp(MotionSpeed, 0.01, 1.5);
+            SpatialScale = Clamp(SpatialScale, 0.45, 2.2);
+            Warp = Clamp(Warp, 0.0, 1.0);
+            ColorCycleSpeed = Clamp(ColorCycleSpeed, 0.1, 3.0);
+            WaveDensity = Clamp(WaveDensity, 0.5, 2.0);
+            RadialPulse = Clamp(RadialPulse, 0.0, 2.0);
+            RotationSpeed = Clamp(RotationSpeed, 0.0, 2.0);
+            Brightness = Clamp(Brightness, 0.5, 1.6);
+            Contrast = Clamp(Contrast, 0.5, 2.0);
+            RenderQuality = Clamp(RenderQuality, 1, 3);
+            TargetFps = Clamp(TargetFps, 20, 75);
+            ScanlineSpacing = Clamp(ScanlineSpacing, 2, 8);
+            ScanlineOpacity = Clamp(ScanlineOpacity, 0, 100);
+            OriginX = Clamp(OriginX, 0.1, 0.9);
+            OriginY = Clamp(OriginY, 0.1, 0.9);
+            Pixelation = Clamp(Pixelation, 1, 20);
+            Language = String.Equals(Language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "es";
+        }
+
+        public void Save()
+        {
+            SaveToRegistryPath(RegistryPath);
+        }
+
+        internal void SaveToRegistryPath(string registryPath)
+        {
+            Validate();
+            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(registryPath))
             {
                 if (key == null)
                 {
@@ -226,6 +256,7 @@ namespace PlasmaOldSchool
                 key.SetValue("ScanlineOpacity", ScanlineOpacity, RegistryValueKind.DWord);
                 key.SetValue("Scanlines", Scanlines ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("ColorCycle", ColorCycle ? 1 : 0, RegistryValueKind.DWord);
+                key.SetValue("RgbPaletteCycle", RgbPaletteCycle ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("MirrorHorizontal", MirrorHorizontal ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("MirrorVertical", MirrorVertical ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("Vignette", Vignette ? 1 : 0, RegistryValueKind.DWord);
