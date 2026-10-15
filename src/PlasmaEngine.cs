@@ -168,36 +168,88 @@ namespace PlasmaOldSchool
             int pixelBlock = Math.Max(1, _settings.Pixelation);
             double orbitX = _settings.MovingOrigin ? Math.Sin(time * 0.5) * 50.0 * scale / _height : 0.0;
             double orbitY = _settings.MovingOrigin ? Math.Cos(time / 3.0) * 30.0 * scale / _height : 0.0;
+            // Invariantes del fotograma: dentro del bucle solo quedan las
+            // cuentas que dependen del pixel.
+            bool movingOrigin = _settings.MovingOrigin;
+            bool colorCycle = _settings.ColorCycle;
+            double colorShift = ColorShift;
+            double radialPulse = _settings.RadialPulse;
+            double rotationSpeed = _settings.RotationSpeed;
+            double densityScale = scale * waveDensity;
+            double waveX = 12.5 * densityScale;
+            double waveY = 14.0 * densityScale;
+            double waveDiagonal = 9.0 * densityScale;
+            double waveRadial = 24.0 * densityScale;
+            double pulseAmount = (1.05 + warp) * radialPulse;
+            double angleFactor = 2.0 + warp * 3.0;
+            double radiusFactor = 11.0 * waveDensity;
+            double timeX = time * 1.14 + _phaseA;
+            double timeY = time * 0.92 - _phaseB;
+            double timeDiagonal = time * 0.73 + _phaseC;
+            double timeRadial = time * 1.42 - _seed;
+            double timeRotation = time * rotationSpeed;
+            double timeFinal = time * 0.18;
+
+            // El plasma solo cambia una vez por bloque de pixelado, asi que se
+            // resuelve un valor por bloque y se replica. Con pixelado 1 el
+            // recorrido es el mismo que antes.
             int y;
-            for (y = 0; y < _height; y++)
+            for (y = 0; y < _height; y += pixelBlock)
             {
-                int sampleY = Math.Min(_height - 1, (y / pixelBlock) * pixelBlock + pixelBlock / 2);
+                int sampleY = Math.Min(_height - 1, y + pixelBlock / 2);
+                int rowLimit = Math.Min(y + pixelBlock, _height);
+                int rowBase = sampleY * _width;
                 int x;
-                for (x = 0; x < _width; x++)
+                for (x = 0; x < _width; x += pixelBlock)
                 {
-                    int sampleX = Math.Min(_width - 1, (x / pixelBlock) * pixelBlock + pixelBlock / 2);
-                    int sample = sampleY * _width + sampleX;
-                    double radialX = _nx[sample] - orbitX;
-                    double radialY = _ny[sample] - orbitY;
-                    double radius = _settings.MovingOrigin ? Math.Sqrt(radialX * radialX + radialY * radialY) : _radius[sample];
-                    double angle = _settings.MovingOrigin ? Math.Atan2(radialY, radialX) : _angle[sample];
-                double waves =
-                    FastSin(_nx[sample] * 12.5 * scale * waveDensity + time * 1.14 + _phaseA) +
-                    FastSin(_ny[sample] * 14.0 * scale * waveDensity - time * 0.92 + _phaseB) +
-                    FastSin((_nx[sample] + _ny[sample]) * 9.0 * scale * waveDensity + time * 0.73 + _phaseC) +
-                    FastSin(radius * 24.0 * scale * waveDensity - time * 1.42 + _seed) * (1.05 + warp) * _settings.RadialPulse +
-                    FastSin(angle * (2.0 + warp * 3.0) + radius * 11.0 * waveDensity - time * _settings.RotationSpeed) * warp;
-                double normalized = 0.5 + 0.5 * FastSin(waves * 1.18 + time * 0.18);
-                if (_settings.ColorCycle)
-                {
-                    // Recorre la propia paleta de forma circular: cada color
-                    // se mezcla gradualmente con el siguiente y la vuelta
-                    // completa vuelve al mismo punto sin salto.
-                    normalized += ColorShift;
-                    normalized -= Math.Floor(normalized);
-                }
-                int paletteIndex = Math.Max(0, Math.Min(255, (int)(normalized * 255.0)));
-                    _pixels[y * _width + x] = _palette[paletteIndex];
+                    int sampleX = Math.Min(_width - 1, x + pixelBlock / 2);
+                    int sample = rowBase + sampleX;
+                    double nx = _nx[sample];
+                    double ny = _ny[sample];
+                    double radius;
+                    double angle;
+                    if (movingOrigin)
+                    {
+                        double radialX = nx - orbitX;
+                        double radialY = ny - orbitY;
+                        radius = Math.Sqrt(radialX * radialX + radialY * radialY);
+                        angle = Math.Atan2(radialY, radialX);
+                    }
+                    else
+                    {
+                        radius = _radius[sample];
+                        angle = _angle[sample];
+                    }
+
+                    double waves =
+                        FastSin(nx * waveX + timeX) +
+                        FastSin(ny * waveY - timeY) +
+                        FastSin((nx + ny) * waveDiagonal + timeDiagonal) +
+                        FastSin(radius * waveRadial - timeRadial) * pulseAmount +
+                        FastSin(angle * angleFactor + radius * radiusFactor - timeRotation) * warp;
+                    double normalized = 0.5 + 0.5 * FastSin(waves * 1.18 + timeFinal);
+                    if (colorCycle)
+                    {
+                        // Recorre la propia paleta de forma circular: cada
+                        // color se mezcla gradualmente con el siguiente y la
+                        // vuelta completa vuelve al mismo punto sin salto.
+                        normalized += colorShift;
+                        normalized -= Math.Floor(normalized);
+                    }
+                    int paletteIndex = Math.Max(0, Math.Min(255, (int)(normalized * 255.0)));
+                    int color = _palette[paletteIndex];
+
+                    int columnLimit = Math.Min(x + pixelBlock, _width);
+                    int blockY;
+                    for (blockY = y; blockY < rowLimit; blockY++)
+                    {
+                        int offset = blockY * _width;
+                        int blockX;
+                        for (blockX = x; blockX < columnLimit; blockX++)
+                        {
+                            _pixels[offset + blockX] = color;
+                        }
+                    }
                 }
             }
 
