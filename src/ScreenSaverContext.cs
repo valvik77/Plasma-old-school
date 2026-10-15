@@ -13,6 +13,7 @@ namespace PlasmaOldSchool
         private readonly Timer _timer;
         private readonly Stopwatch _clock;
         private readonly bool _previewMode;
+        private readonly IntPtr _previewParent;
         private bool _exiting;
         private bool _cursorHidden;
         private Point _initialCursor;
@@ -23,6 +24,7 @@ namespace PlasmaOldSchool
         internal ScreenSaverContext(IntPtr previewParent)
         {
             _previewMode = previewParent != IntPtr.Zero;
+            _previewParent = previewParent;
             PlasmaSettings settings = PlasmaSettings.Load();
             _engine = new PlasmaEngine(settings, ResolveDisplayAspect(previewParent));
             _clock = Stopwatch.StartNew();
@@ -130,6 +132,14 @@ namespace PlasmaOldSchool
 
         private void OnTick(object sender, EventArgs e)
         {
+            // Sin esto el proceso de previsualizacion sobrevive al dialogo
+            // que lo creó y se queda reteniendo el .scr de System32.
+            if (_previewMode && !NativeMethods.IsWindowAlive(_previewParent))
+            {
+                ExitSaver();
+                return;
+            }
+
             if (ShouldExitFromGlobalInput())
             {
                 ExitSaver();

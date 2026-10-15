@@ -40,6 +40,9 @@ namespace PlasmaOldSchool
         internal static extern bool GetClientRect(IntPtr window, out Rect rectangle);
 
         [DllImport("user32.dll")]
+        private static extern bool IsWindow(IntPtr window);
+
+        [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int virtualKey);
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -169,6 +172,26 @@ namespace PlasmaOldSchool
             catch
             {
                 // Si Windows lo rechaza se sale sin bloquear.
+            }
+        }
+
+        // El Panel de control destruye su recuadro de previsualizacion sin
+        // avisar al salvapantallas. Si no se comprueba, el proceso sigue
+        // vivo indefinidamente y retiene el .scr de System32, lo que impide
+        // despues reinstalar o actualizar.
+        internal static bool IsWindowAlive(IntPtr window)
+        {
+            if (window == IntPtr.Zero)
+            {
+                return false;
+            }
+            try
+            {
+                return IsWindow(window);
+            }
+            catch
+            {
+                return false;
             }
         }
 
