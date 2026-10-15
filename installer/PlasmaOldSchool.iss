@@ -39,12 +39,21 @@ SignedUninstaller=no
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+spanish.RemoveSettingsPrompt=¿Quieres borrar también tu configuración de Plasma Old School (paleta, colores y ajustes del motor)?%n%nElige No para conservarla por si vuelves a instalarlo.
+english.RemoveSettingsPrompt=Do you also want to delete your Plasma Old School settings (palette, colours and engine options)?%n%nChoose No to keep them in case you reinstall.
+
 [Files]
 Source: "..\dist\*"; DestDir: "{app}"; Excludes: "PlasmaOldSchool.scr"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\dist\PlasmaOldSchool.scr"; DestDir: "{sys}"; DestName: "PlasmaOldSchool.scr"; Flags: ignoreversion restartreplace
 
 [InstallDelete]
 Type: files; Name: "{app}\PlasmaOldSchool.scr"
+
+; El .scr se instala en System32, fuera de {app}, asi que Windows no lo
+; retira al desinstalar si no se indica aqui de forma explicita.
+[UninstallDelete]
+Type: files; Name: "{sys}\PlasmaOldSchool.scr"
 
 [Registry]
 Root: HKLM64; Subkey: "Software\Valvik\PlasmaOldSchool"; ValueType: string; ValueName: "InstallLocation"; ValueData: "{app}"; Flags: uninsdeletekey
@@ -82,6 +91,12 @@ begin
       RegDeleteValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE');
       RegWriteStringValue(HKCU, 'Control Panel\Desktop', 'ScreenSaveActive', '0');
     end;
-    RegDeleteKeyIncludingSubkeys(HKCU, 'Software\PlasmaOldSchoolScreenSaver');
+    if RegKeyExists(HKCU, 'Software\PlasmaOldSchoolScreenSaver') then
+    begin
+      // La configuracion es trabajo del usuario: puede querer conservarla
+      // para una reinstalacion posterior, asi que no se borra en silencio.
+      if MsgBox(CustomMessage('RemoveSettingsPrompt'), mbConfirmation, MB_YESNO) = IDYES then
+        RegDeleteKeyIncludingSubkeys(HKCU, 'Software\PlasmaOldSchoolScreenSaver');
+    end;
   end;
 end;

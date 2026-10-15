@@ -44,6 +44,24 @@ if (Test-Path -LiteralPath $outputDirectory) {
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 $sources = Get-ChildItem -LiteralPath $sourceDirectory -Filter '*.cs' | Sort-Object Name
 
+# La version del instalador es la unica fuente: se propaga al .scr para que el
+# ejecutable publicado declare el mismo numero que el paquete.
+$packageVersion = '1.0.1'
+if (Test-Path -LiteralPath $installerScript) {
+    $versionMatch = Select-String -LiteralPath $installerScript -Pattern '#define\s+MyAppVersion\s+"([0-9]+(\.[0-9]+){1,3})"' | Select-Object -First 1
+    if ($versionMatch) { $packageVersion = $versionMatch.Matches[0].Groups[1].Value }
+}
+$assemblyVersion = $packageVersion
+while (($assemblyVersion -split '\.').Count -lt 4) { $assemblyVersion += '.0' }
+
+$generatedVersionFile = Join-Path $outputDirectory 'GeneratedVersion.cs'
+@(
+    '// Generado por build.ps1 a partir de la version del instalador.',
+    ('[assembly: System.Reflection.AssemblyVersion("' + $assemblyVersion + '")]'),
+    ('[assembly: System.Reflection.AssemblyFileVersion("' + $assemblyVersion + '")]'),
+    ('[assembly: System.Reflection.AssemblyInformationalVersion("' + $packageVersion + '")]')
+) | Set-Content -LiteralPath $generatedVersionFile -Encoding UTF8
+
 $compilerArguments = @(
     '/nologo',
     '/optimize+',
@@ -54,7 +72,7 @@ $compilerArguments = @(
     '/reference:System.Core.dll',
     '/reference:System.Drawing.dll',
     '/reference:System.Windows.Forms.dll'
-) + $sources.FullName
+) + $sources.FullName + $generatedVersionFile
 
 if (Test-Path -LiteralPath $iconFile) {
     $compilerArguments += ('/win32icon:' + $iconFile)

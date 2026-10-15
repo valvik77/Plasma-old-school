@@ -5,6 +5,8 @@ namespace PlasmaOldSchool
 {
     internal static class NativeMethods
     {
+        private const uint SpiGetScreenSaveSecure = 0x0076;
+
         internal const int GwlStyle = -16;
         internal const int WsChild = 0x40000000;
         internal const int WsPopup = unchecked((int)0x80000000);
@@ -39,6 +41,12 @@ namespace PlasmaOldSchool
 
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int virtualKey);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SystemParametersInfo(uint action, uint parameter, ref int value, uint update);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool LockWorkStation();
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out Point point);
@@ -101,6 +109,67 @@ namespace PlasmaOldSchool
             return (GetAsyncKeyState(1) & 0x8000) != 0 ||
                 (GetAsyncKeyState(2) & 0x8000) != 0 ||
                 (GetAsyncKeyState(4) & 0x8000) != 0;
+        }
+
+        // Windows no bloquea la sesion por su cuenta cuando un salvapantallas
+        // termina: espera que lo haga el propio salvapantallas si el usuario
+        // marco "al reanudar, pedir contrasena". Sin esto se volvia al
+        // escritorio sin pedir nada.
+        internal static bool IsScreenSaverSecure()
+        {
+            // El ajuste vive en el registro del usuario. Se consulta primero
+            // porque SystemParametersInfo devuelve un valor en cache desde el
+            // inicio de la sesion y puede informar de 0 aunque el usuario ya
+            // haya activado la peticion de contrasena.
+            try
+            {
+                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop"))
+                {
+                    if (key != null)
+                    {
+                        object stored = key.GetValue("ScreenSaverIsSecure");
+                        if (stored != null)
+                        {
+                            int parsed;
+                            string text = Convert.ToString(stored, System.Globalization.CultureInfo.InvariantCulture);
+                            if (Int32.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out parsed))
+                            {
+                                return parsed != 0;
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Si el registro no responde se intenta la consulta del sistema.
+            }
+
+            try
+            {
+                int secure = 0;
+                if (SystemParametersInfo(SpiGetScreenSaveSecure, 0, ref secure, 0))
+                {
+                    return secure != 0;
+                }
+            }
+            catch
+            {
+                // Sin respuesta fiable no se fuerza el bloqueo.
+            }
+            return false;
+        }
+
+        internal static void TryLockWorkStation()
+        {
+            try
+            {
+                LockWorkStation();
+            }
+            catch
+            {
+                // Si Windows lo rechaza se sale sin bloquear.
+            }
         }
 
         internal static void TrySetDllDirectory(string path)

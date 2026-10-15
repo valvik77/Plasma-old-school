@@ -34,10 +34,27 @@ namespace PlasmaOldSchool
         private bool _gpuMode;
 
         internal PlasmaEngine(PlasmaSettings settings)
+            : this(settings, 0.0)
+        {
+        }
+
+        // displayAspect es ancho/alto de la pantalla donde se vera el
+        // fotograma. El renderizador CPU lo estira hasta cubrirla, asi que un
+        // fotograma siempre 16:9 salia achatado en 16:10 y muy ensanchado en
+        // un panoramico. Se conserva la altura (y con ella el coste) y se
+        // ajusta el ancho a esa proporcion. Con 0 se mantiene 16:9.
+        internal PlasmaEngine(PlasmaSettings settings, double displayAspect)
         {
             _settings = settings;
             _width = settings.RenderQuality == 1 ? 160 : (settings.RenderQuality == 3 ? 320 : 256);
             _height = settings.RenderQuality == 1 ? 90 : (settings.RenderQuality == 3 ? 180 : 144);
+            if (displayAspect > 0.1)
+            {
+                // El limite evita que una configuracion extrema multiplique el
+                // numero de pixeles a calcular por fotograma.
+                double clampedAspect = Math.Max(1.0, Math.Min(3.6, displayAspect));
+                _width = Math.Max(16, (int)Math.Round(_height * clampedAspect));
+            }
             _frame = new Bitmap(_width, _height, PixelFormat.Format32bppArgb);
             _pixels = new int[_width * _height];
             _nx = new double[_pixels.Length];

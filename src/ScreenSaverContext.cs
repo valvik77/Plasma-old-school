@@ -24,7 +24,7 @@ namespace PlasmaOldSchool
         {
             _previewMode = previewParent != IntPtr.Zero;
             PlasmaSettings settings = PlasmaSettings.Load();
-            _engine = new PlasmaEngine(settings);
+            _engine = new PlasmaEngine(settings, ResolveDisplayAspect(previewParent));
             _clock = Stopwatch.StartNew();
 
             if (_previewMode)
@@ -85,6 +85,41 @@ namespace PlasmaOldSchool
             {
                 _forms[formIndex].Show();
             }
+        }
+
+        // Proporcion de la superficie donde se vera el plasma. Con varias
+        // pantallas se toma la principal: el renderizador CPU comparte un
+        // unico fotograma entre todas y no hay una sola medida correcta.
+        private static double ResolveDisplayAspect(IntPtr previewParent)
+        {
+            try
+            {
+                if (previewParent != IntPtr.Zero)
+                {
+                    NativeMethods.Rect rectangle;
+                    if (NativeMethods.GetClientRect(previewParent, out rectangle))
+                    {
+                        int previewWidth = rectangle.Right - rectangle.Left;
+                        int previewHeight = rectangle.Bottom - rectangle.Top;
+                        if (previewWidth > 0 && previewHeight > 0)
+                        {
+                            return (double)previewWidth / previewHeight;
+                        }
+                    }
+                    return 0.0;
+                }
+
+                Screen screen = Screen.PrimaryScreen ?? (Screen.AllScreens.Length > 0 ? Screen.AllScreens[0] : null);
+                if (screen != null && screen.Bounds.Height > 0)
+                {
+                    return (double)screen.Bounds.Width / screen.Bounds.Height;
+                }
+            }
+            catch
+            {
+                // Si Windows no informa de la geometria se mantiene 16:9.
+            }
+            return 0.0;
         }
 
         private void AddForm(ScreenSaverForm form)
@@ -197,6 +232,14 @@ namespace PlasmaOldSchool
                 _cursorHidden = false;
             }
             _engine.Dispose();
+
+            // Solo tras retirar las ventanas: bloquear con el salvapantallas
+            // aun visible deja la pantalla de sesion detras del plasma. En
+            // previsualizacion no se toca la sesion.
+            if (!_previewMode && NativeMethods.IsScreenSaverSecure())
+            {
+                NativeMethods.TryLockWorkStation();
+            }
             ExitThread();
         }
 
