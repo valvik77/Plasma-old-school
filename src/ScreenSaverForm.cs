@@ -15,6 +15,7 @@ namespace PlasmaOldSchool
         private Direct3DPlasmaRenderer _direct3DRenderer;
         private Point _initialMousePosition;
         private DateTime _shownAt;
+        private bool _waitForVsync = true;
 
         internal ScreenSaverForm(Rectangle bounds, PlasmaEngine engine, bool previewMode, IntPtr previewParent, Action requestExit)
         {
@@ -43,6 +44,14 @@ namespace PlasmaOldSchool
                 NativeMethods.SetWindowLong(windowHandle, NativeMethods.GwlStyle, style);
                 SyncPreviewBounds();
             }
+        }
+
+        // Con una sola pantalla conviene esperar el refresco: da una imagen
+        // estable sin cortes. Con varias, esa espera se acumula y hay que
+        // dejar el ritmo en manos del temporizador.
+        internal void SetVsyncWait(bool wait)
+        {
+            _waitForVsync = wait;
         }
 
         internal void SyncPreviewBounds()
@@ -154,7 +163,7 @@ namespace PlasmaOldSchool
         {
             if (_direct3DRenderer != null)
             {
-                if (_direct3DRenderer.Render(_engine, ClientSize.Width, ClientSize.Height)) return;
+                if (_direct3DRenderer.Render(_engine, ClientSize.Width, ClientSize.Height, _waitForVsync)) return;
                 _direct3DRenderer.Dispose();
                 _direct3DRenderer = null;
                 TryInitializeOpenGl();

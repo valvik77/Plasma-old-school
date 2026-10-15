@@ -186,8 +186,15 @@ namespace PlasmaOldSchool
             int paletteIndex;
             for (quality = 1; quality <= 3; quality++)
             {
-                for (paletteIndex = 0; paletteIndex < PaletteCatalog.Presets.Length - 1; paletteIndex++)
+                for (paletteIndex = 0; paletteIndex < PaletteCatalog.Presets.Length; paletteIndex++)
                 {
+                    // "custom" no trae colores propios: los toma de la paleta
+                    // activa, asi que no aporta nada que comprobar aqui.
+                    if (String.Equals(PaletteCatalog.Presets[paletteIndex].Key, "custom", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     PlasmaSettings testSettings = new PlasmaSettings();
                     testSettings.RenderQuality = quality;
                     testSettings.PaletteKey = PaletteCatalog.Presets[paletteIndex].Key;
@@ -223,7 +230,11 @@ namespace PlasmaOldSchool
                     }
                 }
             }
-            VerifyCpuPixelation();
+            if (!VerifyCpuPixelation())
+            {
+                Environment.ExitCode = 2;
+                return;
+            }
             if (!VerifySettingsValidationAndPersistence())
             {
                 Environment.ExitCode = 5;
@@ -269,38 +280,49 @@ namespace PlasmaOldSchool
             }
         }
 
-        private static void VerifyCpuPixelation()
+        private static bool VerifyCpuPixelation()
         {
-            PlasmaSettings testSettings = new PlasmaSettings();
-            testSettings.RenderQuality = 1;
-            testSettings.Pixelation = 4;
-            testSettings.MovingOrigin = false;
-            testSettings.ColorCycle = false;
-            using (PlasmaEngine engine = new PlasmaEngine(testSettings))
+            // Tamanos que no dividen exactamente el fotograma dejan bloques
+            // incompletos en el borde derecho e inferior. Tambien deben salir
+            // de un solo color, asi que se recorre el fotograma completo.
+            int[] blockSizes = { 1, 3, 4, 7 };
+            int sizeIndex;
+            for (sizeIndex = 0; sizeIndex < blockSizes.Length; sizeIndex++)
             {
-                int blockY;
-                int blockX;
-                for (blockY = 0; blockY + testSettings.Pixelation <= engine.Height; blockY += testSettings.Pixelation)
+                PlasmaSettings testSettings = new PlasmaSettings();
+                testSettings.RenderQuality = 1;
+                testSettings.Pixelation = blockSizes[sizeIndex];
+                testSettings.MovingOrigin = false;
+                testSettings.ColorCycle = false;
+                using (PlasmaEngine engine = new PlasmaEngine(testSettings))
                 {
-                    for (blockX = 0; blockX + testSettings.Pixelation <= engine.Width; blockX += testSettings.Pixelation)
+                    int block = testSettings.Pixelation;
+                    int blockY;
+                    for (blockY = 0; blockY < engine.Height; blockY += block)
                     {
-                        int expected = engine.Frame.GetPixel(blockX, blockY).ToArgb();
-                        int y;
-                        for (y = blockY; y < blockY + testSettings.Pixelation; y++)
+                        int blockX;
+                        for (blockX = 0; blockX < engine.Width; blockX += block)
                         {
-                            int x;
-                            for (x = blockX; x < blockX + testSettings.Pixelation; x++)
+                            int expected = engine.Frame.GetPixel(blockX, blockY).ToArgb();
+                            int limitY = Math.Min(blockY + block, engine.Height);
+                            int limitX = Math.Min(blockX + block, engine.Width);
+                            int y;
+                            for (y = blockY; y < limitY; y++)
                             {
-                                if (engine.Frame.GetPixel(x, y).ToArgb() != expected)
+                                int x;
+                                for (x = blockX; x < limitX; x++)
                                 {
-                                    Environment.ExitCode = 2;
-                                    return;
+                                    if (engine.Frame.GetPixel(x, y).ToArgb() != expected)
+                                    {
+                                        return false;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            return true;
         }
 
         private static void RunGpuSelfTest()

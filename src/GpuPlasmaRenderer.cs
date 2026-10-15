@@ -672,11 +672,6 @@ void main() {
         [DllImport("opengl32.dll")]
         private static extern void glBlendFunc(uint source, uint destination);
 
-        private static T LoadStatic<T>(IntPtr pointer) where T : class
-        {
-            return Marshal.GetDelegateForFunctionPointer(pointer, typeof(T)) as T;
-        }
-
         private static void GlBegin(uint mode) { glBegin(mode); }
         private static void GlEnd() { glEnd(); }
         private static void GlVertex2f(float x, float y) { glVertex2f(x, y); }

@@ -19,7 +19,8 @@ struct FrameData {
     int scanlines, vignette;
     float renderScale, rgbPaletteTime;
     int rgbPaletteCycle;
-    float padding, padding2, padding3;
+    int syncInterval;
+    float padding2, padding3;
 };
 
 static const char* ShaderSource = R"(
@@ -27,7 +28,7 @@ cbuffer Frame : register(b0) {
  float2 resolution; float time; float scale; float2 origin; float warp; float density;
  float pulse; float rotation; float brightness; float contrast; float phaseA; float phaseB; float phaseC; float colorShift;
  float4 color0; float4 color1; float4 color2; float4 color3; float2 mirror; float pixelBlock; float scanlineSpacing;
- float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float rgbPaletteTime; int rgbPaletteCycle; float padding; float padding2; float padding3;
+ float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float rgbPaletteTime; int rgbPaletteCycle; int syncInterval; float padding2; float padding3;
 };
 struct VSOut { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; };
 VSOut VS(uint id:SV_VertexID) { VSOut o; o.uv=float2((id<<1)&2,id&2); o.pos=float4(o.uv*float2(2,-2)+float2(-1,1),0,1); return o; }
@@ -53,7 +54,7 @@ cbuffer Frame : register(b0) {
  float2 resolution; float time; float scale; float2 origin; float warp; float density;
  float pulse; float rotation; float brightness; float contrast; float phaseA; float phaseB; float phaseC; float colorShift;
  float4 color0; float4 color1; float4 color2; float4 color3; float2 mirror; float pixelBlock; float scanlineSpacing;
- float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float rgbPaletteTime; int rgbPaletteCycle; float padding; float padding2; float padding3;
+ float scanlineOpacity; float seed; int colorCycle; int movingOrigin; int scanlines; int vignette; float renderScale; float rgbPaletteTime; int rgbPaletteCycle; int syncInterval; float padding2; float padding3;
 };
 struct VSOut { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; };
 float4 PS(VSOut input):SV_TARGET {
@@ -91,7 +92,7 @@ public:
         if(!Resize(w,h))return false;float scale=std::max(.1f,std::min(1.f,data.renderScale));UINT rw=std::max(1u,(UINT)(w*scale+.5f)),rh=std::max(1u,(UINT)(h*scale+.5f));if(!EnsureSceneTarget(rw,rh))return false;
         FrameData sceneData=data;sceneData.resolution[0]=(float)rw;sceneData.resolution[1]=(float)rh;sceneData.scanlines=0;if(!Upload(sceneData))return false;
         ID3D11RenderTargetView*sceneRt=sceneTarget.Get();context->OMSetRenderTargets(1,&sceneRt,nullptr);D3D11_VIEWPORT sceneVp{0,0,(float)rw,(float)rh,0,1};context->RSSetViewports(1,&sceneVp);context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);context->VSSetShader(vs.Get(),nullptr,0);context->PSSetShader(ps.Get(),nullptr,0);ID3D11Buffer*cb=constants.Get();context->PSSetConstantBuffers(0,1,&cb);context->Draw(3,0);
-        ID3D11RenderTargetView*rt=target.Get();context->OMSetRenderTargets(1,&rt,nullptr);D3D11_VIEWPORT vp{0,0,(float)w,(float)h,0,1};context->RSSetViewports(1,&vp);if(!Upload(data))return false;context->PSSetShader(blitPs.Get(),nullptr,0);ID3D11ShaderResourceView*srv=sceneView.Get();context->PSSetShaderResources(0,1,&srv);ID3D11SamplerState*ss=sampler.Get();context->PSSetSamplers(0,1,&ss);context->Draw(3,0);ID3D11ShaderResourceView*none=nullptr;context->PSSetShaderResources(0,1,&none);return SUCCEEDED(swap->Present(1,0));
+        ID3D11RenderTargetView*rt=target.Get();context->OMSetRenderTargets(1,&rt,nullptr);D3D11_VIEWPORT vp{0,0,(float)w,(float)h,0,1};context->RSSetViewports(1,&vp);if(!Upload(data))return false;context->PSSetShader(blitPs.Get(),nullptr,0);ID3D11ShaderResourceView*srv=sceneView.Get();context->PSSetShaderResources(0,1,&srv);ID3D11SamplerState*ss=sampler.Get();context->PSSetSamplers(0,1,&ss);context->Draw(3,0);ID3D11ShaderResourceView*none=nullptr;context->PSSetShaderResources(0,1,&none);return SUCCEEDED(swap->Present(data.syncInterval<0?1:(UINT)data.syncInterval,0));
     }
 };
 

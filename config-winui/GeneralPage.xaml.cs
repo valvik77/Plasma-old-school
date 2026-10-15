@@ -14,7 +14,7 @@ namespace PlasmaOldSchool.Config
         {
             s=settings; InitializeComponent(); DataContext=s;
             Title.Text=T("General"); PaletteLabel.Text=T("Palette"); ColorsLabel.Text=T("CustomColors"); PixelLabel.Text=T("Pixelation"); SpeedLabel.Text=T("Speed"); ZoomLabel.Text=T("Zoom"); WarpLabel.Text=T("Warp"); CycleLabel.Header=T("ColorCycle"); CycleSpeedLabel.Text=T("ColorCycleSpeed");
-            RgbPaletteCycleLabel.Header = s.Language == "en" ? "RGB palette animation" : "Animación RGB de paleta";
+            RgbPaletteCycleLabel.Header = T("RgbPaletteCycle");
             s.PropertyChanged += SettingsChanged; UpdateColorButtons();
         }
         private string T(string k) { return Localizer.Get(s.Language,k); }
