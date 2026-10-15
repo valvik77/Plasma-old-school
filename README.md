@@ -26,6 +26,8 @@ Para abrir su configuración:
 
 Ejecuta `release\PlasmaOldSchoolSetup.exe`. El instalador copia el paquete a `Program Files`, coloca únicamente el lanzador `.scr` en `System32` para que aparezca permanentemente en la lista de protectores de pantalla y añade accesos para configurarlo, probarlo o desinstalarlo. Solicita permisos de administrador porque Windows sólo enumera de forma fiable los `.scr` instalados en la carpeta del sistema.
 
+Al desinstalar se pregunta si quieres borrar también tu configuración; por defecto se conserva.
+
 Como alternativa manual, conserva la carpeta `dist` completa en una ubicación estable, haz clic derecho sobre `PlasmaOldSchool.scr` y selecciona **Instalar**. No copies únicamente el `.scr` si quieres conservar Direct3D 11 y la configuración WinUI 3.
 
 El archivo admite los modos estándar que usa Windows:
@@ -42,7 +44,13 @@ El motor también expone controles avanzados para densidad de ondas, pulso radia
 
 El modo **Ahorro** está activado por defecto y limita la presentación a 30 FPS, reduciendo el consumo y el ruido de los ventiladores. Puede desactivarse desde la configuración si se prefiere priorizar fluidez.
 
+Con una sola pantalla la imagen se sincroniza con el refresco del monitor. Con varias, esa espera se reparte entre todas y pasa a marcar el ritmo el FPS objetivo, de modo que añadir monitores no divide los fotogramas entre ellos.
+
+Si en Windows está marcada la opción de pedir contraseña al reanudar, el salvapantallas bloquea la sesión al cerrarse.
+
 Cuando se usa la GPU, la opción **Calidad** controla además la resolución interna del shader (25 %, 38 % o 50 % de la pantalla) y lo escala con píxel duro. Tanto Direct3D 11 como OpenGL aplican esta reducción, conservando el acabado retro mientras disminuyen de forma notable el trabajo gráfico.
+
+El renderizador CPU ajusta su fotograma a la proporción de la pantalla, así que el plasma no se deforma en monitores 16:10, 5:4 o panorámicos.
 
 La configuración se guarda para el usuario actual en `HKCU\Software\PlasmaOldSchoolScreenSaver`.
 
